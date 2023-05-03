@@ -125,6 +125,18 @@ type Data struct {
 	Content    []byte            `json:"content"`
 }
 
+// Worker messages.. TODO
+type WorkerMessage struct {
+	MessageID   string    `json:"message_id"`
+	Sent        time.Time `json:"sent"`
+	WorkerName  string    `json:"worker_name"`
+	ResponseTo  string    `json:"response_to"`
+	WorkerEvent struct {
+		EventName    uint   `json:"event_name"`
+		EventMessage string `json:"event_message"`
+	}
+}
+
 // Response messages are published by the server as a response to a data
 // message. This is most often used as a receipt to indicate the receiption of a
 // message by a synchronous request/response transport (such as the HTTP polling

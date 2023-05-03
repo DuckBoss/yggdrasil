@@ -198,6 +198,11 @@ func (c *Client) ListWorkers() (map[string]map[string]string, *dbus.Error) {
 	return c.dispatcher.FlattenDispatchers(), nil
 }
 
+// MessageJournal implements the com.redhat.Yggdrasil1.MessageJournal method.
+func (c *Client) MessageJournal() ([]map[string]string, *dbus.Error) {
+	return c.dispatcher.GetMessageJournal(), nil
+}
+
 // Dispatch implements the com.redhat.Yggdrasil1.Dispatch method.
 func (c *Client) Dispatch(directive string, messageID string, metadata map[string]string, data []byte) *dbus.Error {
 	msg := yggdrasil.Data{
