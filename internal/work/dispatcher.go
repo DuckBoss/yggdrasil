@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -31,13 +32,14 @@ const (
 // to the destination worker. It sends values on the 'outbound' channel to relay
 // data received from workers to a remote address.
 type Dispatcher struct {
-	HTTPClient   *internalhttp.Client
-	conn         *dbus.Conn
-	features     sync.RWMutexMap[map[string]string]
-	Dispatchers  chan map[string]map[string]string
-	WorkerEvents chan ipc.WorkerEvent
-	Inbound      chan yggdrasil.Data
-	Outbound     chan struct {
+	HTTPClient     *internalhttp.Client
+	conn           *dbus.Conn
+	features       sync.RWMutexMap[map[string]string]
+	Dispatchers    chan map[string]map[string]string
+	WorkerEvents   chan ipc.WorkerEvent
+	WorkerMessages []yggdrasil.WorkerMessage
+	Inbound        chan yggdrasil.Data
+	Outbound       chan struct {
 		Data yggdrasil.Data
 		Resp chan yggdrasil.Response
 	}
@@ -45,11 +47,12 @@ type Dispatcher struct {
 
 func NewDispatcher(client *internalhttp.Client) *Dispatcher {
 	return &Dispatcher{
-		HTTPClient:   client,
-		features:     sync.RWMutexMap[map[string]string]{},
-		Dispatchers:  make(chan map[string]map[string]string),
-		WorkerEvents: make(chan ipc.WorkerEvent),
-		Inbound:      make(chan yggdrasil.Data),
+		HTTPClient:     client,
+		features:       sync.RWMutexMap[map[string]string]{},
+		Dispatchers:    make(chan map[string]map[string]string),
+		WorkerEvents:   make(chan ipc.WorkerEvent),
+		WorkerMessages: make([]yggdrasil.WorkerMessage, 0),
+		Inbound:        make(chan yggdrasil.Data),
 		Outbound: make(chan struct {
 			Data yggdrasil.Data
 			Resp chan yggdrasil.Response
@@ -136,25 +139,50 @@ func (d *Dispatcher) Connect() error {
 				}
 				event.Name = ipc.WorkerEventName(eventName)
 				event.Worker = strings.TrimPrefix(dest, "com.redhat.Yggdrasil1.Worker1.")
-
-				eventMessageID, ok := s.Body[1].(string)
-				if !ok {
-					log.Errorf("cannot convert %T to string", s.Body[1])
-					continue
-				}
-				event.MessageID = eventMessageID
-
+				workerMessageID := ""
 				switch ipc.WorkerEventName(eventName) {
 				case ipc.WorkerEventNameWorking:
+					eventId, ok := s.Body[1].(string)
+					if !ok {
+						log.Errorf("cannot convert %T to string", s.Body[1])
+					}
 					eventMessage, ok := s.Body[2].(string)
 					if !ok {
 						log.Errorf("cannot convert %T to string", s.Body[2])
 						continue
 					}
 					event.Message = eventMessage
+					workerMessageID = eventId
+				case ipc.WorkerEventNameBegin:
+					eventID, ok := s.Body[1].(string)
+					if !ok {
+						log.Errorf("cannot convert %T to string", s.Body[1])
+					}
+					workerMessageID = eventID
+				case ipc.WorkerEventNameEnd:
+					eventID, ok := s.Body[1].(string)
+					if !ok {
+						log.Errorf("cannot convert %T to string", s.Body[1])
+					}
+					workerMessageID = eventID
 				}
 
 				d.WorkerEvents <- event
+
+				workerMessage := yggdrasil.WorkerMessage{
+					MessageID:  workerMessageID,
+					Sent:       time.Now().UTC(),
+					WorkerName: event.Worker,
+					ResponseTo: "",
+					WorkerEvent: struct {
+						EventName    uint   "json:\"event_name\""
+						EventMessage string "json:\"event_message\""
+					}{
+						EventName:    uint(event.Name),
+						EventMessage: event.Message,
+					},
+				}
+				d.WorkerMessages = append(d.WorkerMessages, workerMessage)
 			}
 		}
 	}()
@@ -220,6 +248,18 @@ func (d *Dispatcher) Dispatch(data yggdrasil.Data) error {
 	d.features.Set(data.Directive, features)
 	d.Dispatchers <- d.FlattenDispatchers()
 
+	// Save to the journal the messages dispatched by yggdrasil to workers.
+	workerMessage := yggdrasil.WorkerMessage{
+		MessageID:  data.MessageID,
+		Sent:       data.Sent.UTC(),
+		WorkerName: data.Directive,
+		ResponseTo: data.ResponseTo,
+		WorkerEvent: struct {
+			EventName    uint   "json:\"event_name\""
+			EventMessage string "json:\"event_message\""
+		}{},
+	}
+	d.WorkerMessages = append(d.WorkerMessages, workerMessage)
 	return nil
 }
 
@@ -236,6 +276,23 @@ func (d *Dispatcher) FlattenDispatchers() map[string]map[string]string {
 	})
 
 	return dispatchers
+}
+
+func (d *Dispatcher) GetMessageJournal() []map[string]string {
+	messages := []map[string]string{}
+	sort.Slice(d.WorkerMessages, func(i, j int) bool { return d.WorkerMessages[i].Sent.Before(d.WorkerMessages[j].Sent) })
+	for _, item := range d.WorkerMessages {
+		newMessage := map[string]string{
+			"message_id":     item.MessageID,
+			"sent":           item.Sent.String(),
+			"worker_name":    item.WorkerName,
+			"response_to":    item.ResponseTo,
+			"worker_event":   ipc.WorkerEventName(item.WorkerEvent.EventName).String(),
+			"worker_message": item.WorkerEvent.EventMessage,
+		}
+		messages = append(messages, newMessage)
+	}
+	return messages
 }
 
 func (d *Dispatcher) EmitEvent(event ipc.DispatcherEvent) error {

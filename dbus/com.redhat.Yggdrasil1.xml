@@ -35,6 +35,17 @@
             <arg type="a{sa{ss}}" name="workers" direction="out" />
         </method>
 
+        <!--
+            GetMessageJournal:
+            @messages: The set of worker messages.
+
+            Returns the set of worker messages dispatched to workers and 
+            events emitted by workers.
+        -->
+        <method name="MessageJournal">
+            <arg type="a{ss}" name="messages" direction="out" />
+        </method>
+
         <!-- 
             WorkerEvent:
             @worker: Name of the worker emitting the event.
