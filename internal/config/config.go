@@ -28,6 +28,7 @@ const (
 	FlagNameMQTTConnectRetryInterval = "mqtt-connect-retry-interval"
 	FlagNameMQTTAutoReconnect        = "mqtt-auto-reconnect"
 	FlagNameMQTTReconnectDelay       = "mqtt-reconnect-delay"
+	FlagNameMessageJournal           = "message-journal"
 )
 
 var DefaultConfig = Config{
@@ -96,6 +97,10 @@ type Config struct {
 	// MQTTReconnectDelay is the duration the client with wait before attempting
 	// to reconnect to the MQTT broker.
 	MQTTReconnectDelay time.Duration
+
+	// MessageJournal is used to enable the storage of worker events
+	// and message data in a SQLite file at the specified file path.
+	MessageJournal string
 }
 
 // CreateTLSConfig creates a tls.Config object from the current configuration.

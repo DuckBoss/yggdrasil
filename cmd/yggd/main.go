@@ -13,6 +13,7 @@ import (
 	"github.com/redhatinsights/yggdrasil/internal/config"
 	"github.com/redhatinsights/yggdrasil/internal/constants"
 	"github.com/redhatinsights/yggdrasil/internal/http"
+	"github.com/redhatinsights/yggdrasil/internal/messagejournal"
 	"github.com/redhatinsights/yggdrasil/internal/transport"
 	"github.com/redhatinsights/yggdrasil/internal/work"
 
@@ -66,6 +67,7 @@ func setupDefaultConfig(c *cli.Context) {
 		MQTTConnectRetryInterval: c.Duration(config.FlagNameMQTTConnectRetryInterval),
 		MQTTAutoReconnect:        c.Bool(config.FlagNameMQTTAutoReconnect),
 		MQTTReconnectDelay:       c.Duration(config.FlagNameMQTTReconnectDelay),
+		MessageJournal:           c.String(config.FlagNameMessageJournal),
 	}
 }
 
@@ -167,6 +169,29 @@ func setupClient(
 		return nil, nil, cli.Exit(fmt.Errorf("cannot connect client: %w", err), 1)
 	}
 	return client, transporter, nil
+}
+
+// setupMessageJournal tries to set up a message journal database to track
+// worker emitted events at the provided path.
+func setupMessageJournal(client *Client) error {
+	messageJournalPath := config.DefaultConfig.MessageJournal
+	if messageJournalPath != "" {
+		journalFilePath := filepath.Join(messageJournalPath)
+		journal, err := messagejournal.New(journalFilePath)
+		if err != nil {
+			return cli.Exit(
+				fmt.Errorf(
+					"cannot initialize message journal database at '%v': %w",
+					journalFilePath,
+					err,
+				),
+				1,
+			)
+		}
+		client.dispatcher.MessageJournal = journal
+		log.Debugf("initialized message journal at '%v'", journalFilePath)
+	}
+	return nil
 }
 
 // setupTLS tries to set up new TLS config and HTTP client
@@ -349,6 +374,15 @@ func mainAction(c *cli.Context) error {
 		return err
 	}
 
+	// Create a message journal if a journal path is provided
+	// or if it is enabled in the config.
+	// This message journal contains a persistent database that
+	// tracks events emitted by workers across yggd sessions.
+	err = setupMessageJournal(client)
+	if err != nil {
+		return err
+	}
+
 	// Create watcher for certificate changes
 	TlSEvents, err := config.DefaultConfig.WatcherUpdate()
 	if err != nil {
@@ -514,6 +548,10 @@ func main() {
 			Usage:  "Sets the time to wait before attempting to reconnect to `DURATION`",
 			Value:  0 * time.Second,
 			Hidden: true,
+		}),
+		altsrc.NewStringFlag(&cli.StringFlag{
+			Name:  config.FlagNameMessageJournal,
+			Usage: "Record worker events and messages in the database `FILE`",
 		}),
 	}
 
