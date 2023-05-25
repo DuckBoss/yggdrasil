@@ -60,11 +60,14 @@ func messageJournalAction(ctx *cli.Context) error {
 
 	if os.Getenv("DBUS_SESSION_BUS_ADDRESS") != "" {
 		conn, err = dbus.ConnectSessionBus()
+		if err != nil {
+			return cli.Exit(fmt.Errorf("cannot connect to session bus: %w", err), 1)
+		}
 	} else {
 		conn, err = dbus.ConnectSystemBus()
-	}
-	if err != nil {
-		return cli.Exit(fmt.Errorf("cannot connect to bus: %w", err), 1)
+		if err != nil {
+			return cli.Exit(fmt.Errorf("cannot connect to system bus: %w", err), 1)
+		}
 	}
 
 	var journalEntries []map[string]string
