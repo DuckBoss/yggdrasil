@@ -6,7 +6,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
 
@@ -16,6 +15,7 @@ import (
 	"github.com/redhatinsights/yggdrasil"
 	"github.com/redhatinsights/yggdrasil/internal/config"
 	internalhttp "github.com/redhatinsights/yggdrasil/internal/http"
+	"github.com/redhatinsights/yggdrasil/internal/messagejournal"
 	"github.com/redhatinsights/yggdrasil/internal/sync"
 	"github.com/redhatinsights/yggdrasil/ipc"
 )
@@ -35,9 +35,9 @@ type Dispatcher struct {
 	HTTPClient     *internalhttp.Client
 	conn           *dbus.Conn
 	features       sync.RWMutexMap[map[string]string]
+	MessageJournal *messagejournal.MessageJournal
 	Dispatchers    chan map[string]map[string]string
 	WorkerEvents   chan ipc.WorkerEvent
-	WorkerMessages []yggdrasil.WorkerMessage
 	Inbound        chan yggdrasil.Data
 	Outbound       chan struct {
 		Data yggdrasil.Data
@@ -49,9 +49,9 @@ func NewDispatcher(client *internalhttp.Client) *Dispatcher {
 	return &Dispatcher{
 		HTTPClient:     client,
 		features:       sync.RWMutexMap[map[string]string]{},
+		MessageJournal: nil,
 		Dispatchers:    make(chan map[string]map[string]string),
 		WorkerEvents:   make(chan ipc.WorkerEvent),
-		WorkerMessages: make([]yggdrasil.WorkerMessage, 0),
 		Inbound:        make(chan yggdrasil.Data),
 		Outbound: make(chan struct {
 			Data yggdrasil.Data
@@ -169,6 +169,7 @@ func (d *Dispatcher) Connect() error {
 
 				d.WorkerEvents <- event
 
+				// Start goroutine to add a new message journal entry.
 				workerMessage := yggdrasil.WorkerMessage{
 					MessageID:  workerMessageID,
 					Sent:       time.Now().UTC(),
@@ -182,7 +183,12 @@ func (d *Dispatcher) Connect() error {
 						EventMessage: event.Message,
 					},
 				}
-				d.WorkerMessages = append(d.WorkerMessages, workerMessage)
+				go func() {
+					_, err := d.MessageJournal.AddEntry(workerMessage)
+					if err != nil {
+						log.Errorf("cannot add journal entry: %v", err)
+					}
+				}()
 			}
 		}
 	}()
@@ -248,7 +254,7 @@ func (d *Dispatcher) Dispatch(data yggdrasil.Data) error {
 	d.features.Set(data.Directive, features)
 	d.Dispatchers <- d.FlattenDispatchers()
 
-	// Save to the journal the messages dispatched by yggdrasil to workers.
+	// Start goroutine to add a new message journal entry.
 	workerMessage := yggdrasil.WorkerMessage{
 		MessageID:  data.MessageID,
 		Sent:       data.Sent.UTC(),
@@ -259,7 +265,12 @@ func (d *Dispatcher) Dispatch(data yggdrasil.Data) error {
 			EventMessage string "json:\"event_message\""
 		}{},
 	}
-	d.WorkerMessages = append(d.WorkerMessages, workerMessage)
+	go func() {
+		_, err := d.MessageJournal.AddEntry(workerMessage)
+		if err != nil {
+			log.Errorf("cannot add journal entry: %v", err)
+		}
+	}()
 	return nil
 }
 
@@ -276,23 +287,6 @@ func (d *Dispatcher) FlattenDispatchers() map[string]map[string]string {
 	})
 
 	return dispatchers
-}
-
-func (d *Dispatcher) GetMessageJournal() []map[string]string {
-	messages := []map[string]string{}
-	sort.Slice(d.WorkerMessages, func(i, j int) bool { return d.WorkerMessages[i].Sent.Before(d.WorkerMessages[j].Sent) })
-	for _, item := range d.WorkerMessages {
-		newMessage := map[string]string{
-			"message_id":     item.MessageID,
-			"sent":           item.Sent.String(),
-			"worker_name":    item.WorkerName,
-			"response_to":    item.ResponseTo,
-			"worker_event":   ipc.WorkerEventName(item.WorkerEvent.EventName).String(),
-			"worker_message": item.WorkerEvent.EventMessage,
-		}
-		messages = append(messages, newMessage)
-	}
-	return messages
 }
 
 func (d *Dispatcher) EmitEvent(event ipc.DispatcherEvent) error {

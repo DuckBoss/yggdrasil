@@ -36,14 +36,20 @@
         </method>
 
         <!--
-            GetMessageJournal:
+            MessageJournal:
             @messages: The set of worker messages.
 
             Returns the set of worker messages dispatched to workers and 
             events emitted by workers.
         -->
         <method name="MessageJournal">
-            <arg type="a{ss}" name="messages" direction="out" />
+            <arg type="t" name="truncate-length" direction="in" />
+            <arg type="s" name="message-id" direction="in" />
+            <arg type="s" name="worker" direction="in" />
+            <arg type="s" name="from", direction="in" />
+            <arg type="s" name="to", direction="in" />
+            <arg type="s" name="persistent", direction="in" />
+            <arg type="aa{ss}" name="messages" direction="out" />
         </method>
 
         <!-- 
@@ -68,6 +74,19 @@
             3 = WORKING
             Emitted when the worker wishes to continue to announce it is
             working.
+
+            The 'message' argument is an ordered set of journal entries: []map[string]string
+            'message' argument format: [
+                {
+                    "message_id":     ...,
+                    "sent":           ...,
+                    "worker_name":    ...,
+                    "response_to":    ...,
+                    "worker_event":   ...,
+                    "worker_message": ...,
+                },
+                ...
+            ]
         -->
         <signal name="WorkerEvent">
             <arg type="s" name="worker" />

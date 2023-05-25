@@ -12,6 +12,7 @@ import (
 	"github.com/redhatinsights/yggdrasil/internal/config"
 	"github.com/redhatinsights/yggdrasil/internal/constants"
 	"github.com/redhatinsights/yggdrasil/internal/http"
+	"github.com/redhatinsights/yggdrasil/internal/messagejournal"
 	"github.com/redhatinsights/yggdrasil/internal/transport"
 	"github.com/redhatinsights/yggdrasil/internal/work"
 
@@ -127,6 +128,11 @@ func main() {
 			Value:  true,
 			Hidden: true,
 		}),
+		altsrc.NewBoolFlag(&cli.BoolFlag{
+			Name:  config.FlagNameEnableMessageJournal,
+			Usage: "Enables a message journal of emitted worker events and messages.",
+			Value: false,
+		}),
 	}
 
 	// This BeforeFunc will load flag values from a config file only if the
@@ -161,18 +167,19 @@ func main() {
 		}
 
 		config.DefaultConfig = config.Config{
-			LogLevel:       c.String(config.FlagNameLogLevel),
-			ClientID:       c.String(config.FlagNameClientID),
-			Server:         c.StringSlice(config.FlagNameServer),
-			CertFile:       c.String(config.FlagNameCertFile),
-			KeyFile:        c.String(config.FlagNameKeyFile),
-			CARoot:         c.StringSlice(config.FlagNameCaRoot),
-			PathPrefix:     c.String(config.FlagNamePathPrefix),
-			Protocol:       c.String(config.FlagNameProtocol),
-			DataHost:       c.String(config.FlagNameDataHost),
-			CanonicalFacts: c.String(config.FlagNameCanonicalFacts),
-			HTTPRetries:    c.Int(config.FlagNameHTTPRetries),
-			HTTPTimeout:    c.Duration(config.FlagNameHTTPTimeout),
+			LogLevel:             c.String(config.FlagNameLogLevel),
+			ClientID:             c.String(config.FlagNameClientID),
+			Server:               c.StringSlice(config.FlagNameServer),
+			CertFile:             c.String(config.FlagNameCertFile),
+			KeyFile:              c.String(config.FlagNameKeyFile),
+			CARoot:               c.StringSlice(config.FlagNameCaRoot),
+			PathPrefix:           c.String(config.FlagNamePathPrefix),
+			Protocol:             c.String(config.FlagNameProtocol),
+			DataHost:             c.String(config.FlagNameDataHost),
+			CanonicalFacts:       c.String(config.FlagNameCanonicalFacts),
+			HTTPRetries:          c.Int(config.FlagNameHTTPRetries),
+			HTTPTimeout:          c.Duration(config.FlagNameHTTPTimeout),
+			EnableMessageJournal: c.Bool(config.FlagNameEnableMessageJournal),
 		}
 
 		tlsConfig, err := config.DefaultConfig.CreateTLSConfig()
@@ -254,6 +261,17 @@ func main() {
 			return cli.Exit(fmt.Errorf("unsupported transport protocol: %v", config.DefaultConfig.Protocol), 1)
 		}
 		client := NewClient(dispatcher, transporter)
+
+		enableMessageJournal := config.DefaultConfig.EnableMessageJournal
+		if enableMessageJournal {
+			journal, err := messagejournal.New(constants.ConfigDir, "messagejournal.db")
+			if err != nil {
+				return cli.Exit(fmt.Errorf("cannot initialize message journal database: %w", err), 1)
+			}
+			client.dispatcher.MessageJournal = journal
+			log.Debug("enabled message journal")
+		}
+
 		if err := client.Connect(); err != nil {
 			return cli.Exit(fmt.Errorf("cannot connect client: %w", err), 1)
 		}

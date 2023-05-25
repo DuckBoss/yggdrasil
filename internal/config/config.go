@@ -27,6 +27,7 @@ const (
 	FlagNameMQTTConnectRetry         = "mqtt-connect-retry"
 	FlagNameMQTTConnectRetryInterval = "mqtt-connect-retry-interval"
 	FlagNameMQTTAutoReconnect        = "mqtt-auto-reconnect"
+	FlagNameEnableMessageJournal     = "enable-message-journal"
 )
 
 var DefaultConfig = Config{
@@ -91,6 +92,10 @@ type Config struct {
 	// MQTTAutoReconnect is the MQTT client option that enables automatic
 	// reconnection logic when the client unexpectedly disconnects.
 	MQTTAutoReconnect bool
+
+	// EnableMessageJournal is used to enable the storage of worker events
+	// and message data.
+	EnableMessageJournal bool
 }
 
 func (conf *Config) CreateTLSConfig() (*tls.Config, error) {

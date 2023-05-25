@@ -137,10 +137,17 @@ func main() {
 			UsageText:   "yggctl message-journal",
 			Description: "The message-journal command sends a dbus call to yggdrasil to retrieve a message journal containing all worker messages and emitted events.",
 			Flags: []cli.Flag{
-				&cli.StringFlag{
+				&cli.BoolFlag{
+					Name:     "persistent",
+					Aliases:  []string{"p"},
+					Usage:    "Display worker messages and emitted events gathered across multiple sessions from persistent storage.",
+					Required: false,
+				},
+				&cli.IntFlag{
 					Name:     "truncate-message",
 					Aliases:  []string{"t"},
-					Usage:    "Truncates worker event messages if they exceed the specified character count (10 by default).",
+					Value:    15,
+					Usage:    "Truncates worker event messages if they exceed the specified character count.",
 					Required: false,
 				},
 				&cli.StringFlag{
@@ -153,6 +160,18 @@ func main() {
 					Name:     "message-id",
 					Aliases:  []string{"m"},
 					Usage:    "Only display worker messages and emitted events for the entries with the specified message id.",
+					Required: false,
+				},
+				&cli.StringFlag{
+					Name:     "from",
+					Aliases:  []string{},
+					Usage:    "Only display worker messages and emitted events sent starting from the timestamp provided.",
+					Required: false,
+				},
+				&cli.StringFlag{
+					Name:     "to",
+					Aliases:  []string{},
+					Usage:    "Only display worker messages and emitted events sent up to the timestamp provided.",
 					Required: false,
 				},
 			},

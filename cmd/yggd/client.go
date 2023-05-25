@@ -18,6 +18,7 @@ import (
 	internaldbus "github.com/redhatinsights/yggdrasil/dbus"
 	"github.com/redhatinsights/yggdrasil/internal/config"
 	"github.com/redhatinsights/yggdrasil/internal/constants"
+	"github.com/redhatinsights/yggdrasil/internal/messagejournal"
 	"github.com/redhatinsights/yggdrasil/internal/tags"
 	"github.com/redhatinsights/yggdrasil/internal/transport"
 	"github.com/redhatinsights/yggdrasil/internal/work"
@@ -199,8 +200,24 @@ func (c *Client) ListWorkers() (map[string]map[string]string, *dbus.Error) {
 }
 
 // MessageJournal implements the com.redhat.Yggdrasil1.MessageJournal method.
-func (c *Client) MessageJournal() ([]map[string]string, *dbus.Error) {
-	return c.dispatcher.GetMessageJournal(), nil
+func (c *Client) MessageJournal(persistent bool, worker string, messageID string, truncateLength int, from string, to string) ([]map[string]string, *dbus.Error) {
+	filter := messagejournal.MessageJournalFilter{
+		Persistent:     persistent,
+		TruncateLength: truncateLength,
+		MessageID:      messageID,
+		Worker:         worker,
+		From:           from,
+		To:             to,
+	}
+
+	journal, err := c.dispatcher.MessageJournal.GetEntries(filter)
+	if err != nil {
+		return nil, dbus.MakeFailedError(err)
+	}
+	if journal == nil {
+		return nil, dbus.MakeFailedError(fmt.Errorf("the message journal is not enabled"))
+	}
+	return journal, nil
 }
 
 // Dispatch implements the com.redhat.Yggdrasil1.Dispatch method.
