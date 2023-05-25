@@ -41,6 +41,20 @@
 
             Returns the set of worker messages dispatched to workers and 
             events emitted by workers.
+
+            The 'message' argument is a set of journal entries: []map[string]string
+            'message' argument format: 
+                [
+                    {
+                        "message_id":     <string value>,
+                        "sent":           <string value>,
+                        "worker_name":    <string value>,
+                        "response_to":    <string value>,
+                        "worker_event":   <string value>,
+                        "worker_message": <string value>,
+                    },
+                    ...
+                ]
         -->
         <method name="MessageJournal">
             <arg type="t" name="truncate-length" direction="in" />
@@ -74,19 +88,6 @@
             3 = WORKING
             Emitted when the worker wishes to continue to announce it is
             working.
-
-            The 'message' argument is an ordered set of journal entries: []map[string]string
-            'message' argument format: [
-                {
-                    "message_id":     ...,
-                    "sent":           ...,
-                    "worker_name":    ...,
-                    "response_to":    ...,
-                    "worker_event":   ...,
-                    "worker_message": ...,
-                },
-                ...
-            ]
         -->
         <signal name="WorkerEvent">
             <arg type="s" name="worker" />
