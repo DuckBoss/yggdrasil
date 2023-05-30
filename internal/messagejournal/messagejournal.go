@@ -11,31 +11,10 @@ import (
 	"github.com/redhatinsights/yggdrasil/ipc"
 )
 
-const messageJournalTemporaryDropString string = `
-	DROP TABLE IF EXISTS runtime;
-`
-const messageJournalTemporaryCreateString string = `
-	CREATE TABLE runtime (
-		id INTEGER NOT NULL PRIMARY KEY,
-		message_id VARCHAR(36) NOT NULL,
-		sent DATETIME NOT NULL,
-		worker_name VARCHAR(128) NOT NULL,
-		response_to VARCHAR(36),
-		worker_event INTEGER,
-		worker_message TEXT
-	);
-`
-const messageJournalPersistentCreateString string = `
-	CREATE TABLE IF NOT EXISTS persistent (
-		id INTEGER NOT NULL PRIMARY KEY,
-		message_id VARCHAR(36) NOT NULL,
-		sent DATETIME NOT NULL,
-		worker_name VARCHAR(128) NOT NULL,
-		response_to VARCHAR(36),
-		worker_event INTEGER,
-		worker_message TEXT
-	);
-`
+
+const runtimeTableName string = "runtime"
+const persistentTableName string = "persistent"
+const insertEntryTemplate string = "INSERT INTO %s(message_id, sent, worker_name, response_to, worker_event, worker_message) values (?,?,?,?,?,?)"
 
 // MessageJournal is a data structure representing the collection
 // of message journal entries received from worker emitted events and messages.
@@ -53,6 +32,17 @@ type Filter struct {
 }
 
 func New(dir string, name string) (*MessageJournal, error) {
+	const dropTableTemplate string = "DROP TABLE IF EXISTS %s"
+	const createTableTemplate string = `CREATE TABLE IF NOT EXISTS %s (
+		id INTEGER NOT NULL PRIMARY KEY,
+		message_id VARCHAR(36) NOT NULL,
+		sent DATETIME NOT NULL,
+		worker_name VARCHAR(128) NOT NULL,
+		response_to VARCHAR(36),
+		worker_event INTEGER,
+		worker_message TEXT
+	);`
+
 	var err error
 	filePath := filepath.Join(dir, name)
 
@@ -67,13 +57,13 @@ func New(dir string, name string) (*MessageJournal, error) {
 		return nil, fmt.Errorf("message journal database not connected: %w", err)
 	}
 
-	if _, err = db.Exec(messageJournalTemporaryDropString); err != nil {
+	if _, err = db.Exec(fmt.Sprintf(dropTableTemplate, runtimeTableName)); err != nil {
 		return nil, fmt.Errorf("runtime messsage journal table not deleted: %w", err)
 	}
-	if _, err = db.Exec(messageJournalTemporaryCreateString); err != nil {
+	if _, err = db.Exec(fmt.Sprintf(createTableTemplate, runtimeTableName)); err != nil {
 		return nil, fmt.Errorf("runtime messsage journal table not created: %w", err)
 	}
-	if _, err = db.Exec(messageJournalPersistentCreateString); err != nil {
+	if _, err = db.Exec(fmt.Sprintf(createTableTemplate, persistentTableName)); err != nil {
 		return nil, fmt.Errorf("persistent messsage journal table not created: %w", err)
 	}
 
@@ -90,20 +80,20 @@ func (j *MessageJournal) AddEntry(entry yggdrasil.WorkerMessage) (*yggdrasil.Wor
 		return nil, fmt.Errorf("message journal not enabled")
 	}
 
-	runtimeAction, err := j.database.Prepare("INSERT INTO runtime(message_id, sent, worker_name, response_to, worker_event, worker_message) values (?,?,?,?,?,?)")
+	runtimeAction, err := j.database.Prepare(fmt.Sprintf(insertEntryTemplate, runtimeTableName))
 	if err != nil {
 		return nil, err
 	}
-	persistentAction, err := j.database.Prepare("INSERT INTO persistent(message_id, sent, worker_name, response_to, worker_event, worker_message) values (?,?,?,?,?,?)")
+	persistentAction, err := j.database.Prepare(fmt.Sprintf(insertEntryTemplate, persistentTableName))
 	if err != nil {
 		return nil, err
 	}
 
-	runtimeResult, err := runtimeAction.Exec(entry.MessageID, entry.Sent, entry.WorkerName, entry.ResponseTo, entry.WorkerEvent.EventName, entry.WorkerEvent.EventMessage)
+	runtimeResult, err := runtimeAction.Exec(runtimeTableName, entry.MessageID, entry.Sent, entry.WorkerName, entry.ResponseTo, entry.WorkerEvent.EventName, entry.WorkerEvent.EventMessage)
 	if err != nil {
 		return nil, err
 	}
-	persistentResult, err := persistentAction.Exec(entry.MessageID, entry.Sent, entry.WorkerName, entry.ResponseTo, entry.WorkerEvent.EventName, entry.WorkerEvent.EventMessage)
+	persistentResult, err := persistentAction.Exec(persistentTableName, entry.MessageID, entry.Sent, entry.WorkerName, entry.ResponseTo, entry.WorkerEvent.EventName, entry.WorkerEvent.EventMessage)
 	if err != nil {
 		return nil, err
 	}
@@ -135,9 +125,9 @@ func (j *MessageJournal) GetEntries(filter Filter) ([]map[string]string, error) 
 	args := []interface{}{}
 	queryString := "SELECT * FROM "
 	if filter.Persistent {
-		queryString += "persistent "
+		queryString += fmt.Sprintf("%s, ", persistentTableName)
 	} else {
-		queryString += "runtime "
+		queryString += fmt.Sprintf("%s, ", runtimeTableName)
 	}
 	if filter.MessageID != "" || filter.Worker != "" || filter.From != "" || filter.To != "" {
 		queryString += "WHERE "
