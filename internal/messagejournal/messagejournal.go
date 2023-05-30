@@ -43,7 +43,7 @@ type MessageJournal struct {
 	database *sql.DB
 }
 
-type MessageJournalFilter struct {
+type Filter struct {
 	Persistent     bool
 	TruncateLength int
 	MessageID      string
@@ -120,7 +120,7 @@ func (j *MessageJournal) AddEntry(entry yggdrasil.WorkerMessage) (*yggdrasil.Wor
 	return &entry, nil
 }
 
-func (j *MessageJournal) GetEntries(filter MessageJournalFilter) ([]map[string]string, error) {
+func (j *MessageJournal) GetEntries(filter Filter) ([]map[string]string, error) {
 	// If the message journal is nil, it means the message journal
 	// is not enabled in the config.toml file or provided as a user argument.
 	if j == nil {

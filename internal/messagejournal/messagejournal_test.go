@@ -66,14 +66,14 @@ func TestGetEntries(t *testing.T) {
 	tests := []struct {
 		description string
 		entries     []yggdrasil.WorkerMessage
-		input       MessageJournalFilter
+		input       Filter
 		want        []map[string]string
 		wantError   error
 	}{
 		{
 			description: "get journal entries - unfiltered empty",
 			entries:     []yggdrasil.WorkerMessage{},
-			input: MessageJournalFilter{
+			input: Filter{
 				Persistent:     false,
 				TruncateLength: 100,
 				MessageID:      "",
@@ -88,7 +88,7 @@ func TestGetEntries(t *testing.T) {
 			entries: []yggdrasil.WorkerMessage{
 				placeholderWorkerMessageEntry(),
 			},
-			input: MessageJournalFilter{
+			input: Filter{
 				Persistent:     false,
 				TruncateLength: 100,
 				MessageID:      "",
@@ -112,7 +112,7 @@ func TestGetEntries(t *testing.T) {
 			entries: []yggdrasil.WorkerMessage{
 				placeholderWorkerMessageEntry(),
 			},
-			input: MessageJournalFilter{
+			input: Filter{
 				Persistent:     false,
 				TruncateLength: 100,
 				MessageID:      "test-invalid-filtered-message-id",
@@ -140,7 +140,7 @@ func TestGetEntries(t *testing.T) {
 					},
 				},
 			},
-			input: MessageJournalFilter{
+			input: Filter{
 				Persistent:     false,
 				TruncateLength: 100,
 				MessageID:      "test-filtered-message-id",
