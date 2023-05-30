@@ -14,10 +14,6 @@ import (
 const runtimeTableName string = "runtime"
 const persistentTableName string = "persistent"
 
-const insertEntryTemplate string = `INSERT INTO %s (
-	message_id, sent, worker_name, response_to, worker_event, worker_message) 
-	values (?,?,?,?,?,?)"`
-
 // MessageJournal is a data structure representing the collection
 // of message journal entries received from worker emitted events and messages.
 type MessageJournal struct {
@@ -82,19 +78,20 @@ func (j *MessageJournal) AddEntry(entry yggdrasil.WorkerMessage) (*yggdrasil.Wor
 		return nil, fmt.Errorf("message journal not enabled")
 	}
 
+	const insertEntryTemplate string = `INSERT INTO %s (
+		message_id, sent, worker_name, response_to, worker_event, worker_message) 
+		values (?,?,?,?,?,?)`
+
 	runtimeAction, err := j.database.Prepare(fmt.Sprintf(insertEntryTemplate, runtimeTableName))
 	if err != nil {
 		return nil, err
 	}
-	persistentAction, err := j.database.Prepare(
-		fmt.Sprintf(insertEntryTemplate, persistentTableName),
-	)
+	persistentAction, err := j.database.Prepare(fmt.Sprintf(insertEntryTemplate, persistentTableName))
 	if err != nil {
 		return nil, err
 	}
 
 	runtimeResult, err := runtimeAction.Exec(
-		runtimeTableName,
 		entry.MessageID,
 		entry.Sent,
 		entry.WorkerName,
@@ -106,7 +103,6 @@ func (j *MessageJournal) AddEntry(entry yggdrasil.WorkerMessage) (*yggdrasil.Wor
 		return nil, err
 	}
 	persistentResult, err := persistentAction.Exec(
-		persistentTableName,
 		entry.MessageID,
 		entry.Sent,
 		entry.WorkerName,
@@ -128,52 +124,6 @@ func (j *MessageJournal) AddEntry(entry yggdrasil.WorkerMessage) (*yggdrasil.Wor
 	}
 
 	return &entry, nil
-}
-
-func (j *MessageJournal) buildDynamicGetEntriesQuery(
-	filter Filter,
-	queryArgs *[]interface{},
-) string {
-	// Build SQL query to retrieve journal entries.
-	// FIXME: It works but I hate it... is there a better
-	// way to do this without an external library?
-
-	queryString := "SELECT * FROM "
-	if filter.Persistent {
-		queryString += fmt.Sprintf("%s, ", persistentTableName)
-	} else {
-		queryString += fmt.Sprintf("%s, ", runtimeTableName)
-	}
-	if filter.MessageID != "" || filter.Worker != "" || filter.From != "" || filter.To != "" {
-		queryString += "WHERE "
-	}
-	if filter.MessageID != "" {
-		queryString += "message_id = $1 "
-		*queryArgs = append(*queryArgs, filter.MessageID)
-		if filter.Worker != "" {
-			queryString += "AND "
-		}
-	}
-	if filter.Worker != "" {
-		queryString += "worker_name = $2 "
-		*queryArgs = append(*queryArgs, filter.Worker)
-		if filter.From != "" {
-			queryString += "AND "
-		}
-	}
-	if filter.From != "" {
-		queryString += "sent >= $3 "
-		*queryArgs = append(*queryArgs, filter.From)
-		if filter.To != "" {
-			queryString += "AND "
-		}
-	}
-	if filter.To != "" {
-		queryString += "sent <= $4 "
-		*queryArgs = append(*queryArgs, filter.To)
-	}
-	queryString += "ORDER BY sent"
-	return queryString
 }
 
 func (j *MessageJournal) GetEntries(filter Filter) ([]map[string]string, error) {
@@ -247,4 +197,47 @@ func (j *MessageJournal) GetEntries(filter Filter) ([]map[string]string, error) 
 	}
 
 	return entries, nil
+}
+
+func (j *MessageJournal) buildDynamicGetEntriesQuery(filter Filter, queryArgs *[]interface{}) string {
+	// Build SQL query to retrieve journal entries.
+	// FIXME: It works but I hate it... is there a better
+	// way to do this without an external library?
+
+	queryString := "SELECT * FROM "
+	if filter.Persistent {
+		queryString += fmt.Sprintf("%s ", persistentTableName)
+	} else {
+		queryString += fmt.Sprintf("%s ", runtimeTableName)
+	}
+	if filter.MessageID != "" || filter.Worker != "" || filter.From != "" || filter.To != "" {
+		queryString += "WHERE "
+	}
+	if filter.MessageID != "" {
+		queryString += "message_id = $1 "
+		*queryArgs = append(*queryArgs, filter.MessageID)
+		if filter.Worker != "" {
+			queryString += "AND "
+		}
+	}
+	if filter.Worker != "" {
+		queryString += "worker_name = $2 "
+		*queryArgs = append(*queryArgs, filter.Worker)
+		if filter.From != "" {
+			queryString += "AND "
+		}
+	}
+	if filter.From != "" {
+		queryString += "sent >= $3 "
+		*queryArgs = append(*queryArgs, filter.From)
+		if filter.To != "" {
+			queryString += "AND "
+		}
+	}
+	if filter.To != "" {
+		queryString += "sent <= $4 "
+		*queryArgs = append(*queryArgs, filter.To)
+	}
+	queryString += "ORDER BY sent"
+	return queryString
 }
