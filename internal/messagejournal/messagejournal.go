@@ -201,6 +201,14 @@ func (j *MessageJournal) GetEntries(filter Filter) ([]map[string]string, error) 
 		}
 		entries = append(entries, newMessage)
 	}
-	rows.Close()
+	rowIterationErr := rows.Err()
+	if rowIterationErr != nil {
+		return nil, rowIterationErr
+	}
+	closeErr := rows.Close()
+	if closeErr != nil {
+		return nil, closeErr
+	}
+
 	return entries, nil
 }
