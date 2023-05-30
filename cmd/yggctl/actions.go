@@ -21,7 +21,14 @@ func generateDataMessageAction(c *cli.Context) error {
 		return cli.Exit(fmt.Errorf("cannot unmarshal metadata: %w", err), 1)
 	}
 
-	data, err := generateMessage("data", c.String("response-to"), c.String("directive"), c.Args().First(), metadata, c.Int("version"))
+	data, err := generateMessage(
+		"data",
+		c.String("response-to"),
+		c.String("directive"),
+		c.Args().First(),
+		metadata,
+		c.Int("version"),
+	)
 	if err != nil {
 		return cli.Exit(fmt.Errorf("cannot marshal message: %w", err), 1)
 	}
@@ -32,7 +39,14 @@ func generateDataMessageAction(c *cli.Context) error {
 }
 
 func generateControlMessageAction(c *cli.Context) error {
-	data, err := generateMessage(c.String("type"), c.String("response-to"), "", c.Args().First(), nil, c.Int("version"))
+	data, err := generateMessage(
+		c.String("type"),
+		c.String("response-to"),
+		"",
+		c.Args().First(),
+		nil,
+		c.Int("version"),
+	)
 	if err != nil {
 		return cli.Exit(fmt.Errorf("cannot marshal message: %w", err), 1)
 	}
@@ -46,7 +60,12 @@ func messageJournalAction(ctx *cli.Context) error {
 	// Set the worker message truncate length from the user-provided arguments
 	truncateLength := ctx.Int("truncate-message")
 	if truncateLength <= 0 {
-		return cli.Exit(fmt.Errorf("cannot retrieve message journal: 'truncate-message' must be a positive number."), 1)
+		return cli.Exit(
+			fmt.Errorf(
+				"cannot retrieve message journal: 'truncate-message' must be a positive number.",
+			),
+			1,
+		)
 	}
 	// Get the user provided 'worker'/'message-id'/'from'/'to' arguments to filter journal entries if provided.
 	selectedPersistent := ctx.Bool("persistent")
@@ -71,7 +90,14 @@ func messageJournalAction(ctx *cli.Context) error {
 	}
 
 	var journalEntries []map[string]string
-	args := []interface{}{selectedPersistent, selectedWorker, selectedMessageID, truncateLength, selectedFrom, selectedTo}
+	args := []interface{}{
+		selectedPersistent,
+		selectedWorker,
+		selectedMessageID,
+		truncateLength,
+		selectedFrom,
+		selectedTo,
+	}
 	obj := conn.Object("com.redhat.Yggdrasil1", "/com/redhat/Yggdrasil1")
 	if err := obj.Call("com.redhat.Yggdrasil1.MessageJournal", dbus.Flags(0), args...).Store(&journalEntries); err != nil {
 		return cli.Exit(fmt.Errorf("cannot list message journal entries: %v", err), 1)
@@ -83,9 +109,22 @@ func messageJournalAction(ctx *cli.Context) error {
 	}
 
 	writer := tabwriter.NewWriter(os.Stdout, 4, 4, 2, ' ', 0)
-	fmt.Fprint(writer, "MESSAGE #\tMESSAGE ID\tSENT\tWORKER NAME\tRESPONSE TO\tWORKER EVENT\tWORKER MESSAGE\n")
+	fmt.Fprint(
+		writer,
+		"MESSAGE #\tMESSAGE ID\tSENT\tWORKER NAME\tRESPONSE TO\tWORKER EVENT\tWORKER MESSAGE\n",
+	)
 	for idx, entry := range journalEntries {
-		fmt.Fprintf(writer, "%d\t%s\t%s\t%s\t%s\t%v\t%s\n", idx, entry["message_id"], entry["sent"], entry["worker_name"], entry["response_to"], entry["worker_event"], entry["worker_message"])
+		fmt.Fprintf(
+			writer,
+			"%d\t%s\t%s\t%s\t%s\t%v\t%s\n",
+			idx,
+			entry["message_id"],
+			entry["sent"],
+			entry["worker_name"],
+			entry["response_to"],
+			entry["worker_event"],
+			entry["worker_message"],
+		)
 	}
 	writer.Flush()
 
@@ -233,10 +272,21 @@ func listenAction(ctx *cli.Context) error {
 	return nil
 }
 
-func generateMessage(messageType, responseTo, directive, content string, metadata map[string]string, version int) ([]byte, error) {
+func generateMessage(
+	messageType, responseTo, directive, content string,
+	metadata map[string]string,
+	version int,
+) ([]byte, error) {
 	switch messageType {
 	case "data":
-		msg, err := generateDataMessage(yggdrasil.MessageType(messageType), responseTo, directive, []byte(content), metadata, version)
+		msg, err := generateDataMessage(
+			yggdrasil.MessageType(messageType),
+			responseTo,
+			directive,
+			[]byte(content),
+			metadata,
+			version,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -246,7 +296,12 @@ func generateMessage(messageType, responseTo, directive, content string, metadat
 		}
 		return data, nil
 	case "command":
-		msg, err := generateControlMessage(yggdrasil.MessageType(messageType), responseTo, version, []byte(content))
+		msg, err := generateControlMessage(
+			yggdrasil.MessageType(messageType),
+			responseTo,
+			version,
+			[]byte(content),
+		)
 		if err != nil {
 			return nil, err
 		}

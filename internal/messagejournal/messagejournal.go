@@ -11,10 +11,12 @@ import (
 	"github.com/redhatinsights/yggdrasil/ipc"
 )
 
-
 const runtimeTableName string = "runtime"
 const persistentTableName string = "persistent"
-const insertEntryTemplate string = "INSERT INTO %s(message_id, sent, worker_name, response_to, worker_event, worker_message) values (?,?,?,?,?,?)"
+
+const insertEntryTemplate string = `INSERT INTO %s (
+	message_id, sent, worker_name, response_to, worker_event, worker_message) 
+	values (?,?,?,?,?,?)"`
 
 // MessageJournal is a data structure representing the collection
 // of message journal entries received from worker emitted events and messages.
@@ -84,16 +86,34 @@ func (j *MessageJournal) AddEntry(entry yggdrasil.WorkerMessage) (*yggdrasil.Wor
 	if err != nil {
 		return nil, err
 	}
-	persistentAction, err := j.database.Prepare(fmt.Sprintf(insertEntryTemplate, persistentTableName))
+	persistentAction, err := j.database.Prepare(
+		fmt.Sprintf(insertEntryTemplate, persistentTableName),
+	)
 	if err != nil {
 		return nil, err
 	}
 
-	runtimeResult, err := runtimeAction.Exec(runtimeTableName, entry.MessageID, entry.Sent, entry.WorkerName, entry.ResponseTo, entry.WorkerEvent.EventName, entry.WorkerEvent.EventMessage)
+	runtimeResult, err := runtimeAction.Exec(
+		runtimeTableName,
+		entry.MessageID,
+		entry.Sent,
+		entry.WorkerName,
+		entry.ResponseTo,
+		entry.WorkerEvent.EventName,
+		entry.WorkerEvent.EventMessage,
+	)
 	if err != nil {
 		return nil, err
 	}
-	persistentResult, err := persistentAction.Exec(persistentTableName, entry.MessageID, entry.Sent, entry.WorkerName, entry.ResponseTo, entry.WorkerEvent.EventName, entry.WorkerEvent.EventMessage)
+	persistentResult, err := persistentAction.Exec(
+		persistentTableName,
+		entry.MessageID,
+		entry.Sent,
+		entry.WorkerName,
+		entry.ResponseTo,
+		entry.WorkerEvent.EventName,
+		entry.WorkerEvent.EventMessage,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -110,12 +130,14 @@ func (j *MessageJournal) AddEntry(entry yggdrasil.WorkerMessage) (*yggdrasil.Wor
 	return &entry, nil
 }
 
-
-func (j *MessageJournal) buildDynamicGetEntriesQuery(filter Filter, queryArgs *[]interface{}) string {
+func (j *MessageJournal) buildDynamicGetEntriesQuery(
+	filter Filter,
+	queryArgs *[]interface{},
+) string {
 	// Build SQL query to retrieve journal entries.
 	// FIXME: It works but I hate it... is there a better
 	// way to do this without an external library?
-	
+
 	queryString := "SELECT * FROM "
 	if filter.Persistent {
 		queryString += fmt.Sprintf("%s, ", persistentTableName)
@@ -160,7 +182,7 @@ func (j *MessageJournal) GetEntries(filter Filter) ([]map[string]string, error) 
 	if j == nil {
 		return nil, nil
 	}
-	
+
 	entries := []map[string]string{}
 	queryArgs := []interface{}{}
 	queryString := j.buildDynamicGetEntriesQuery(filter, &queryArgs)
@@ -184,7 +206,15 @@ func (j *MessageJournal) GetEntries(filter Filter) ([]map[string]string, error) 
 		var workerEvent uint
 		var workerEventMessage string
 
-		err := rows.Scan(&rowID, &messageID, &sent, &workerName, &responseTo, &workerEvent, &workerEventMessage)
+		err := rows.Scan(
+			&rowID,
+			&messageID,
+			&sent,
+			&workerName,
+			&responseTo,
+			&workerEvent,
+			&workerEventMessage,
+		)
 		if err != nil {
 			return nil, err
 		}
