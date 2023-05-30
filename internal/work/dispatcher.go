@@ -142,9 +142,14 @@ func (d *Dispatcher) Connect() error {
 				workerMessageID := ""
 				switch ipc.WorkerEventName(eventName) {
 				case ipc.WorkerEventNameWorking:
+					if len(s.Body) != 3 {
+						log.Errorf("invalid number of parameters in the emitted worker event: %s", event.Worker)
+						continue
+					}
 					eventId, ok := s.Body[1].(string)
 					if !ok {
 						log.Errorf("cannot convert %T to string", s.Body[1])
+						continue
 					}
 					eventMessage, ok := s.Body[2].(string)
 					if !ok {
@@ -154,15 +159,25 @@ func (d *Dispatcher) Connect() error {
 					event.Message = eventMessage
 					workerMessageID = eventId
 				case ipc.WorkerEventNameBegin:
+					if len(s.Body) != 2 {
+						log.Errorf("invalid number of parameters in the emitted worker event: %s", event.Worker)
+						continue
+					}
 					eventID, ok := s.Body[1].(string)
 					if !ok {
 						log.Errorf("cannot convert %T to string", s.Body[1])
+						continue
 					}
 					workerMessageID = eventID
 				case ipc.WorkerEventNameEnd:
+					if len(s.Body) != 2 {
+						log.Errorf("invalid number of parameters in the emitted worker event: %s", event.Worker)
+						continue
+					}
 					eventID, ok := s.Body[1].(string)
 					if !ok {
 						log.Errorf("cannot convert %T to string", s.Body[1])
+						continue
 					}
 					workerMessageID = eventID
 				}
