@@ -110,19 +110,12 @@ func (j *MessageJournal) AddEntry(entry yggdrasil.WorkerMessage) (*yggdrasil.Wor
 	return &entry, nil
 }
 
-func (j *MessageJournal) GetEntries(filter Filter) ([]map[string]string, error) {
-	// If the message journal is nil, it means the message journal
-	// is not enabled in the config.toml file or provided as a user argument.
-	if j == nil {
-		return nil, nil
-	}
 
-	entries := []map[string]string{}
-
+func (j *MessageJournal) buildDynamicGetEntriesQuery(filter Filter, queryArgs *[]interface{}) string {
 	// Build SQL query to retrieve journal entries.
 	// FIXME: It works but I hate it... is there a better
 	// way to do this without an external library?
-	args := []interface{}{}
+	
 	queryString := "SELECT * FROM "
 	if filter.Persistent {
 		queryString += fmt.Sprintf("%s, ", persistentTableName)
@@ -134,37 +127,50 @@ func (j *MessageJournal) GetEntries(filter Filter) ([]map[string]string, error) 
 	}
 	if filter.MessageID != "" {
 		queryString += "message_id = $1 "
-		args = append(args, filter.MessageID)
+		*queryArgs = append(*queryArgs, filter.MessageID)
 		if filter.Worker != "" {
 			queryString += "AND "
 		}
 	}
 	if filter.Worker != "" {
 		queryString += "worker_name = $2 "
-		args = append(args, filter.Worker)
+		*queryArgs = append(*queryArgs, filter.Worker)
 		if filter.From != "" {
 			queryString += "AND "
 		}
 	}
 	if filter.From != "" {
 		queryString += "sent >= $3 "
-		args = append(args, filter.From)
+		*queryArgs = append(*queryArgs, filter.From)
 		if filter.To != "" {
 			queryString += "AND "
 		}
 	}
 	if filter.To != "" {
 		queryString += "sent <= $4 "
-		args = append(args, filter.To)
+		*queryArgs = append(*queryArgs, filter.To)
 	}
 	queryString += "ORDER BY sent"
+	return queryString
+}
+
+func (j *MessageJournal) GetEntries(filter Filter) ([]map[string]string, error) {
+	// If the message journal is nil, it means the message journal
+	// is not enabled in the config.toml file or provided as a user argument.
+	if j == nil {
+		return nil, nil
+	}
+	
+	entries := []map[string]string{}
+	queryArgs := []interface{}{}
+	queryString := j.buildDynamicGetEntriesQuery(filter, &queryArgs)
 
 	preparedQuery, err := j.database.Prepare(queryString)
 	if err != nil {
 		return nil, err
 	}
 
-	rows, err := preparedQuery.Query(args...)
+	rows, err := preparedQuery.Query(queryArgs...)
 	if err != nil {
 		return nil, err
 	}
