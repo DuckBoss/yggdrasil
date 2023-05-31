@@ -214,9 +214,6 @@ func (c *Client) MessageJournal(persistent bool, worker string, messageID string
 	if err != nil {
 		return nil, dbus.MakeFailedError(err)
 	}
-	if journal == nil {
-		return nil, dbus.MakeFailedError(fmt.Errorf("the message journal is not enabled"))
-	}
 	return journal, nil
 }
 

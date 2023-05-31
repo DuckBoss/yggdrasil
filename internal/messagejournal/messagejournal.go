@@ -80,7 +80,7 @@ func (j *MessageJournal) AddEntry(entry yggdrasil.WorkerMessage) (*yggdrasil.Wor
 	// If the message journal is nil, it means the message journal
 	// is not enabled in the config.toml file or provided as a user argument.
 	if j == nil {
-		return nil, fmt.Errorf("message journal not enabled")
+		return nil, nil
 	}
 
 	const insertEntryTemplate string = `INSERT INTO %s (
@@ -137,7 +137,7 @@ func (j *MessageJournal) GetEntries(filter Filter) ([]map[string]string, error) 
 	// If the message journal is nil, it means the message journal
 	// is not enabled in the config.toml file or provided as a user argument.
 	if j == nil {
-		return nil, nil
+		return nil, fmt.Errorf("the message journal not enabled")
 	}
 
 	entries := []map[string]string{}
