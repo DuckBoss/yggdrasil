@@ -20,6 +20,8 @@ type MessageJournal struct {
 	database *sql.DB
 }
 
+// Filter is a data structure representing the filtering options
+// that are used when message journal entries are retrieved by yggctl.
 type Filter struct {
 	Persistent     bool
 	TruncateLength int
@@ -29,6 +31,9 @@ type Filter struct {
 	To             string
 }
 
+// New initializes a message journal sqlite database consisting
+// of a runtime table that gets cleared on every session start
+// and a persistent table that maintains journal entries across sessions.
 func New(dir string, name string) (*MessageJournal, error) {
 	const dropTableTemplate string = "DROP TABLE IF EXISTS %s"
 	const createTableTemplate string = `CREATE TABLE IF NOT EXISTS %s (
@@ -68,7 +73,7 @@ func New(dir string, name string) (*MessageJournal, error) {
 	return &messageJournal, nil
 }
 
-// Adds a new message journal entry to both the temporary runtime table
+// AddEntry adds a new message journal entry to both the temporary runtime table
 // which gets cleared at the start of every session and the persistent table
 // which maintains message entries across multiple sessions.
 func (j *MessageJournal) AddEntry(entry yggdrasil.WorkerMessage) (*yggdrasil.WorkerMessage, error) {
@@ -126,6 +131,8 @@ func (j *MessageJournal) AddEntry(entry yggdrasil.WorkerMessage) (*yggdrasil.Wor
 	return &entry, nil
 }
 
+// GetEntries retrieves a list of all the journal entries in the message journal database
+// that meet the criteria of the provided message journal filter.
 func (j *MessageJournal) GetEntries(filter Filter) ([]map[string]string, error) {
 	// If the message journal is nil, it means the message journal
 	// is not enabled in the config.toml file or provided as a user argument.
@@ -199,6 +206,9 @@ func (j *MessageJournal) GetEntries(filter Filter) ([]map[string]string, error) 
 	return entries, nil
 }
 
+// buildDynamicGetEntriesQuery is a utility method that builds the dynamic sql query
+// required to filter journal entry messages from the message journal database
+// when they are retrieved in the 'GetEntries' method.
 func (j *MessageJournal) buildDynamicGetEntriesQuery(filter Filter, queryArgs *[]interface{}) string {
 	// Build SQL query to retrieve journal entries.
 	// FIXME: It works but I hate it... is there a better
