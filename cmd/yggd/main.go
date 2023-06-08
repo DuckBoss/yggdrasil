@@ -129,9 +129,8 @@ func main() {
 			Hidden: true,
 		}),
 		altsrc.NewBoolFlag(&cli.BoolFlag{
-			Name:  config.FlagNameEnableMessageJournal,
-			Usage: "Enables a message journal of emitted worker events and messages.",
-			Value: false,
+			Name:  config.FlagNameMessageJournal,
+			Usage: "Enables a message journal of emitted worker events and messages at the specified `PATH`.",
 		}),
 	}
 
@@ -167,19 +166,19 @@ func main() {
 		}
 
 		config.DefaultConfig = config.Config{
-			LogLevel:             c.String(config.FlagNameLogLevel),
-			ClientID:             c.String(config.FlagNameClientID),
-			Server:               c.StringSlice(config.FlagNameServer),
-			CertFile:             c.String(config.FlagNameCertFile),
-			KeyFile:              c.String(config.FlagNameKeyFile),
-			CARoot:               c.StringSlice(config.FlagNameCaRoot),
-			PathPrefix:           c.String(config.FlagNamePathPrefix),
-			Protocol:             c.String(config.FlagNameProtocol),
-			DataHost:             c.String(config.FlagNameDataHost),
-			CanonicalFacts:       c.String(config.FlagNameCanonicalFacts),
-			HTTPRetries:          c.Int(config.FlagNameHTTPRetries),
-			HTTPTimeout:          c.Duration(config.FlagNameHTTPTimeout),
-			EnableMessageJournal: c.Bool(config.FlagNameEnableMessageJournal),
+			LogLevel:       c.String(config.FlagNameLogLevel),
+			ClientID:       c.String(config.FlagNameClientID),
+			Server:         c.StringSlice(config.FlagNameServer),
+			CertFile:       c.String(config.FlagNameCertFile),
+			KeyFile:        c.String(config.FlagNameKeyFile),
+			CARoot:         c.StringSlice(config.FlagNameCaRoot),
+			PathPrefix:     c.String(config.FlagNamePathPrefix),
+			Protocol:       c.String(config.FlagNameProtocol),
+			DataHost:       c.String(config.FlagNameDataHost),
+			CanonicalFacts: c.String(config.FlagNameCanonicalFacts),
+			HTTPRetries:    c.Int(config.FlagNameHTTPRetries),
+			HTTPTimeout:    c.Duration(config.FlagNameHTTPTimeout),
+			MessageJournal: c.String(config.FlagNameMessageJournal),
 		}
 
 		tlsConfig, err := config.DefaultConfig.CreateTLSConfig()
@@ -262,9 +261,9 @@ func main() {
 		}
 		client := NewClient(dispatcher, transporter)
 
-		enableMessageJournal := config.DefaultConfig.EnableMessageJournal
-		if enableMessageJournal {
-			journal, err := messagejournal.New(constants.ConfigDir, "messagejournal.db")
+		enableMessageJournal := config.DefaultConfig.MessageJournal
+		if enableMessageJournal != "" {
+			journal, err := messagejournal.New(filepath.Join(enableMessageJournal, "messagejournal.db"))
 			if err != nil {
 				return cli.Exit(fmt.Errorf("cannot initialize message journal database: %w", err), 1)
 			}

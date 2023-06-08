@@ -3,7 +3,6 @@ package messagejournal
 import (
 	"database/sql"
 	"fmt"
-	"path/filepath"
 	"time"
 
 	"git.sr.ht/~spc/go-log"
@@ -35,7 +34,7 @@ type Filter struct {
 // New initializes a message journal sqlite database consisting
 // of a runtime table that gets cleared on every session start
 // and a persistent table that maintains journal entries across sessions.
-func New(dir string, name string) (*MessageJournal, error) {
+func New(databaseFilePath string) (*MessageJournal, error) {
 	const dropTableTemplate string = "DROP TABLE IF EXISTS %s"
 	const createTableTemplate string = `CREATE TABLE IF NOT EXISTS %s (
 		id INTEGER NOT NULL PRIMARY KEY,
@@ -48,9 +47,7 @@ func New(dir string, name string) (*MessageJournal, error) {
 	);`
 
 	var err error
-	filePath := filepath.Join(dir, name)
-
-	db, err := sql.Open("sqlite3", filePath)
+	db, err := sql.Open("sqlite3", databaseFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("database object not created: %w", err)
 	}

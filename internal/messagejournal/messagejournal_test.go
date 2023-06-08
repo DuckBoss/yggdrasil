@@ -35,17 +35,17 @@ func TestNew(t *testing.T) {
 
 	tests := []struct {
 		description string
-		input       [2]string
+		input       string
 	}{
 		{
 			description: "create message journal",
-			input:       [2]string{tempDir, "messagejournal-test.db"},
+			input:       filepath.Join(tempDir, "messagejournal-test.db"),
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
-			got, err := New(test.input[0], test.input[1])
+			got, err := New(test.input)
 
 			if err != nil {
 				t.Fatal(err)
@@ -168,7 +168,7 @@ func TestGetEntries(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
 			// Create a message journal to test with:
-			journal, err := New(tempDir, "messagejournal-test.db")
+			journal, err := New(filepath.Join(tempDir, "messagejournal-test.db"))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -223,7 +223,7 @@ func TestAddEntry(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
-			messageJournal, err := New(tempDir, "messagejournal-test.db")
+			messageJournal, err := New(filepath.Join(tempDir, "messagejournal-test.db"))
 			if err != nil {
 				t.Fatal(err)
 			}
