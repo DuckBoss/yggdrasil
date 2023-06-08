@@ -57,13 +57,6 @@ func generateControlMessageAction(c *cli.Context) error {
 }
 
 func messageJournalAction(ctx *cli.Context) error {
-	// Get the user provided 'worker'/'message-id'/'from'/'to' arguments to filter journal entries if provided.
-	selectedPersistent := ctx.Bool("persistent")
-	selectedWorker := ctx.String("worker")
-	selectedMessageID := ctx.String("message-id")
-	selectedFrom := ctx.String("from")
-	selectedTo := ctx.String("to")
-
 	var conn *dbus.Conn
 	var err error
 
@@ -81,12 +74,12 @@ func messageJournalAction(ctx *cli.Context) error {
 
 	var journalEntries []map[string]string
 	args := []interface{}{
-		selectedPersistent,
-		selectedWorker,
-		selectedMessageID,
+		ctx.Bool("persistent"),
+		ctx.String("worker"),
+		ctx.String("message-id"),
 		ctx.Uint("truncate-length"),
-		selectedFrom,
-		selectedTo,
+		ctx.String("from"),
+		ctx.String("to"),
 	}
 	obj := conn.Object("com.redhat.Yggdrasil1", "/com/redhat/Yggdrasil1")
 	if err := obj.Call("com.redhat.Yggdrasil1.MessageJournal", dbus.Flags(0), args...).Store(&journalEntries); err != nil {
