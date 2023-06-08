@@ -139,7 +139,8 @@ func (d *Dispatcher) Connect() error {
 				}
 				event.Name = ipc.WorkerEventName(eventName)
 				event.Worker = strings.TrimPrefix(dest, "com.redhat.Yggdrasil1.Worker1.")
-				workerMessageID := ""
+				var workerMessageID string
+
 				switch ipc.WorkerEventName(eventName) {
 				case ipc.WorkerEventNameWorking:
 					if len(s.Body) != 3 {
@@ -180,6 +181,9 @@ func (d *Dispatcher) Connect() error {
 						continue
 					}
 					workerMessageID = eventID
+				default:
+					log.Errorf("unhandled worker event type: %v", ipc.WorkerEventName(eventName))
+					continue
 				}
 
 				d.WorkerEvents <- event
