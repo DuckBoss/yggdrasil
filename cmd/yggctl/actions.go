@@ -57,16 +57,6 @@ func generateControlMessageAction(c *cli.Context) error {
 }
 
 func messageJournalAction(ctx *cli.Context) error {
-	// Set the worker message truncate length from the user-provided arguments
-	truncateLength := ctx.Int("truncate-message")
-	if truncateLength <= 0 {
-		return cli.Exit(
-			fmt.Errorf(
-				"cannot retrieve message journal: 'truncate-message' must be a positive number",
-			),
-			1,
-		)
-	}
 	// Get the user provided 'worker'/'message-id'/'from'/'to' arguments to filter journal entries if provided.
 	selectedPersistent := ctx.Bool("persistent")
 	selectedWorker := ctx.String("worker")
@@ -94,7 +84,7 @@ func messageJournalAction(ctx *cli.Context) error {
 		selectedPersistent,
 		selectedWorker,
 		selectedMessageID,
-		truncateLength,
+		ctx.Uint("truncate-length"),
 		selectedFrom,
 		selectedTo,
 	}

@@ -143,7 +143,7 @@ func main() {
 					Usage:    "Display worker messages and emitted events gathered across multiple sessions from persistent storage.",
 					Required: false,
 				},
-				&cli.IntFlag{
+				&cli.UintFlag{
 					Name:     "truncate-message",
 					Aliases:  []string{"t"},
 					Value:    15,
