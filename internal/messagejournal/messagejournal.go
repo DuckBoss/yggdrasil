@@ -77,12 +77,6 @@ func New(dir string, name string) (*MessageJournal, error) {
 // which gets cleared at the start of every session and the persistent table
 // which maintains message entries across multiple sessions.
 func (j *MessageJournal) AddEntry(entry yggdrasil.WorkerMessage) (*yggdrasil.WorkerMessage, error) {
-	// If the message journal is nil, it means the message journal
-	// is not enabled in the config.toml file or provided as a user argument.
-	if j == nil {
-		return nil, nil
-	}
-
 	const insertEntryTemplate string = `INSERT INTO %s (
 		message_id, sent, worker_name, response_to, worker_event, worker_message) 
 		values (?,?,?,?,?,?)`
@@ -134,12 +128,6 @@ func (j *MessageJournal) AddEntry(entry yggdrasil.WorkerMessage) (*yggdrasil.Wor
 // GetEntries retrieves a list of all the journal entries in the message journal database
 // that meet the criteria of the provided message journal filter.
 func (j *MessageJournal) GetEntries(filter Filter) ([]map[string]string, error) {
-	// If the message journal is nil, it means the message journal
-	// is not enabled in the config.toml file or provided as a user argument.
-	if j == nil {
-		return nil, fmt.Errorf("the message journal not enabled")
-	}
-
 	entries := []map[string]string{}
 	queryString, queryArgs := j.buildDynamicGetEntriesQuery(filter)
 

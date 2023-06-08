@@ -210,6 +210,9 @@ func (c *Client) MessageJournal(persistent bool, worker string, messageID string
 		To:             to,
 	}
 
+	if c.dispatcher.MessageJournal == nil {
+		return nil, dbus.MakeFailedError(fmt.Errorf("message journal is not enabled"))
+	}
 	journal, err := c.dispatcher.MessageJournal.GetEntries(filter)
 	if err != nil {
 		return nil, dbus.MakeFailedError(err)

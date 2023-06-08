@@ -183,22 +183,26 @@ func (d *Dispatcher) Connect() error {
 				}
 
 				d.WorkerEvents <- event
-
+				
 				// Start goroutine to add a new message journal entry.
-				workerMessage := yggdrasil.WorkerMessage{
-					MessageID:  workerMessageID,
-					Sent:       time.Now().UTC(),
-					WorkerName: event.Worker,
-					ResponseTo: "",
-					WorkerEvent: struct {
-						EventName    uint   "json:\"event_name\""
-						EventMessage string "json:\"event_message\""
-					}{
-						EventName:    uint(event.Name),
-						EventMessage: event.Message,
-					},
-				}
 				go func() {
+					// Skip adding a new entry if the message journal is disabled.
+					if d.MessageJournal == nil {
+						return
+					}
+					workerMessage := yggdrasil.WorkerMessage{
+						MessageID:  workerMessageID,
+						Sent:       time.Now().UTC(),
+						WorkerName: event.Worker,
+						ResponseTo: "",
+						WorkerEvent: struct {
+							EventName    uint   "json:\"event_name\""
+							EventMessage string "json:\"event_message\""
+						}{
+							EventName:    uint(event.Name),
+							EventMessage: event.Message,
+						},
+					}
 					_, err := d.MessageJournal.AddEntry(workerMessage)
 					if err != nil {
 						log.Errorf("cannot add journal entry: %v", err)
@@ -270,17 +274,21 @@ func (d *Dispatcher) Dispatch(data yggdrasil.Data) error {
 	d.Dispatchers <- d.FlattenDispatchers()
 
 	// Start goroutine to add a new message journal entry.
-	workerMessage := yggdrasil.WorkerMessage{
-		MessageID:  data.MessageID,
-		Sent:       data.Sent.UTC(),
-		WorkerName: data.Directive,
-		ResponseTo: data.ResponseTo,
-		WorkerEvent: struct {
-			EventName    uint   "json:\"event_name\""
-			EventMessage string "json:\"event_message\""
-		}{},
-	}
 	go func() {
+		// Skip adding a new entry if the message journal is disabled.
+		if d.MessageJournal == nil {
+			return
+		}
+		workerMessage := yggdrasil.WorkerMessage{
+			MessageID:  data.MessageID,
+			Sent:       data.Sent.UTC(),
+			WorkerName: data.Directive,
+			ResponseTo: data.ResponseTo,
+			WorkerEvent: struct {
+				EventName    uint   "json:\"event_name\""
+				EventMessage string "json:\"event_message\""
+			}{},
+		}
 		_, err := d.MessageJournal.AddEntry(workerMessage)
 		if err != nil {
 			log.Errorf("cannot add journal entry: %v", err)
