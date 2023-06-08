@@ -62,7 +62,7 @@ func messageJournalAction(ctx *cli.Context) error {
 	if truncateLength <= 0 {
 		return cli.Exit(
 			fmt.Errorf(
-				"cannot retrieve message journal: 'truncate-message' must be a positive number.",
+				"cannot retrieve message journal: 'truncate-message' must be a positive number",
 			),
 			1,
 		)
