@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"git.sr.ht/~spc/go-log"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/redhatinsights/yggdrasil"
 	"github.com/redhatinsights/yggdrasil/ipc"
@@ -83,11 +84,11 @@ func (j *MessageJournal) AddEntry(entry yggdrasil.WorkerMessage) (*yggdrasil.Wor
 
 	runtimeAction, err := j.database.Prepare(fmt.Sprintf(insertEntryTemplate, runtimeTableName))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot prepare statement for table '%v': %w", runtimeTableName, err)
 	}
 	persistentAction, err := j.database.Prepare(fmt.Sprintf(insertEntryTemplate, persistentTableName))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot prepare statement for table '%v': %w", persistentTableName, err)
 	}
 
 	runtimeResult, err := runtimeAction.Exec(
@@ -99,7 +100,7 @@ func (j *MessageJournal) AddEntry(entry yggdrasil.WorkerMessage) (*yggdrasil.Wor
 		entry.WorkerEvent.EventMessage,
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not insert journal entry into table '%v': %w", runtimeTableName, err)
 	}
 	persistentResult, err := persistentAction.Exec(
 		entry.MessageID,
@@ -110,17 +111,20 @@ func (j *MessageJournal) AddEntry(entry yggdrasil.WorkerMessage) (*yggdrasil.Wor
 		entry.WorkerEvent.EventMessage,
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not insert journal entry into table '%v': %w", persistentTableName, err)
 	}
 
 	runtimeEntryID, err := runtimeResult.LastInsertId()
 	if err != nil {
-		return nil, fmt.Errorf("%v-%v", runtimeEntryID, err)
+		return nil, fmt.Errorf("could not select last insert ID '%v' for table '%v': %w", runtimeEntryID, runtimeTableName, err)
 	}
-	presistentEntryID, err := persistentResult.LastInsertId()
+	log.Debugf("new message journal entry (id: %v) added to table: '%v'", runtimeEntryID, runtimeTableName)
+
+	persistentEntryID, err := persistentResult.LastInsertId()
 	if err != nil {
-		return nil, fmt.Errorf("%v-%v", presistentEntryID, err)
+		return nil, fmt.Errorf("could not select last insert ID '%v' for table '%v': %w", persistentEntryID, persistentTableName, err)
 	}
+	log.Debugf("new message journal entry (id: %v) added to table: '%v'", persistentEntryID, persistentTableName)
 
 	return &entry, nil
 }
@@ -133,12 +137,12 @@ func (j *MessageJournal) GetEntries(filter Filter) ([]map[string]string, error) 
 
 	preparedQuery, err := j.database.Prepare(queryString)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot prepare query when retrieving journal entries: %w", err)
 	}
 
 	rows, err := preparedQuery.Query(queryArgs...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot execute query to retrieve journal entries: %w", err)
 	}
 
 	for rows.Next() {
@@ -160,7 +164,7 @@ func (j *MessageJournal) GetEntries(filter Filter) ([]map[string]string, error) 
 			&workerEventMessage,
 		)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("cannot scan journal entry columns: %w", err)
 		}
 
 		// Truncate the worker messages by the truncate length specified.
@@ -183,11 +187,11 @@ func (j *MessageJournal) GetEntries(filter Filter) ([]map[string]string, error) 
 	}
 	rowIterationErr := rows.Err()
 	if rowIterationErr != nil {
-		return nil, rowIterationErr
+		return nil, fmt.Errorf("cannot iterate queried journal entries: %w", rowIterationErr)
 	}
 	closeErr := rows.Close()
 	if closeErr != nil {
-		return nil, closeErr
+		return nil, fmt.Errorf("cannot close journal entry rows: %w", closeErr)
 	}
 
 	return entries, nil
