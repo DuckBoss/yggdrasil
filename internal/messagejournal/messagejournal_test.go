@@ -12,20 +12,18 @@ import (
 	"github.com/redhatinsights/yggdrasil"
 )
 
-func placeholderWorkerMessageEntry() yggdrasil.WorkerMessage {
-	return yggdrasil.WorkerMessage{
-		MessageID:  "test-id",
-		Sent:       time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
-		WorkerName: "test-worker",
-		ResponseTo: "test-response",
-		WorkerEvent: struct {
-			EventName    uint   "json:\"event_name\""
-			EventMessage string "json:\"event_message\""
-		}{
-			EventName:    0,
-			EventMessage: "test-event-message",
-		},
-	}
+var placeholderWorkerMessageEntry = yggdrasil.WorkerMessage {
+	MessageID:  "test-id",
+	Sent:       time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
+	WorkerName: "test-worker",
+	ResponseTo: "test-response",
+	WorkerEvent: struct {
+		EventName    uint   "json:\"event_name\""
+		EventMessage string "json:\"event_message\""
+	}{
+		EventName:    0,
+		EventMessage: "test-event-message",
+	},
 }
 
 func TestNew(t *testing.T) {
@@ -86,7 +84,7 @@ func TestGetEntries(t *testing.T) {
 		{
 			description: "get journal entries - unfiltered results",
 			entries: []yggdrasil.WorkerMessage{
-				placeholderWorkerMessageEntry(),
+				placeholderWorkerMessageEntry,
 			},
 			input: Filter{
 				Persistent:     false,
@@ -110,7 +108,7 @@ func TestGetEntries(t *testing.T) {
 		{
 			description: "get journal entries - filtered empty",
 			entries: []yggdrasil.WorkerMessage{
-				placeholderWorkerMessageEntry(),
+				placeholderWorkerMessageEntry,
 			},
 			input: Filter{
 				Persistent:     false,
@@ -125,7 +123,7 @@ func TestGetEntries(t *testing.T) {
 		{
 			description: "get journal entries - filtered results",
 			entries: []yggdrasil.WorkerMessage{
-				placeholderWorkerMessageEntry(),
+				placeholderWorkerMessageEntry,
 				{
 					MessageID:  "test-filtered-message-id",
 					Sent:       time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
@@ -213,8 +211,8 @@ func TestAddEntry(t *testing.T) {
 	}{
 		{
 			description: "create journal entry",
-			input:       placeholderWorkerMessageEntry(),
-			want:        placeholderWorkerMessageEntry(),
+			input:       placeholderWorkerMessageEntry,
+			want:        placeholderWorkerMessageEntry,
 		},
 	}
 
