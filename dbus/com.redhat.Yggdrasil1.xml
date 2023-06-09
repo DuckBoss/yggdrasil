@@ -37,25 +37,26 @@
 
         <!--
             MessageJournal:
-            @messages: The set of worker messages.
+            @truncate_length: The maximum length of worker message content.
+            @message_id: Filter journal entries to only contain entries with this message id value.
+            @worker: Filter journal entries to only contain entries with this worker name.
+            @from: Filter journal entries to only contain entries from this date time value.
+            @to: Filter journal entries to only contain entries up to this date time value.
+            @persistent: Filter journal entries to only contain entries from the persistent collection of
+            journal entries spanning multiple sessions. By default, journal entries are collected from
+            the active session.
 
+            @messages: Array of dictionary objects matching the input filter parameters.
+            Each element in the array is a dictionary with key/value pairs as follows:
+            "message_id":     <string value>,
+            "sent":           <string value>,
+            "worker_name":    <string value>,
+            "response_to":    <string value>,
+            "worker_event":   <string value>,
+            "worker_message": <string value>,
 
             Returns the set of worker messages dispatched to workers and 
             events emitted by workers.
-
-            The 'message' argument is a set of journal entries: []map[string]string
-            'message' argument format: 
-                [
-                    {
-                        "message_id":     <string value>,
-                        "sent":           <string value>,
-                        "worker_name":    <string value>,
-                        "response_to":    <string value>,
-                        "worker_event":   <string value>,
-                        "worker_message": <string value>,
-                    },
-                    ...
-                ]
         -->
         <method name="MessageJournal">
             <arg type="t" name="truncate_length" direction="in" />
