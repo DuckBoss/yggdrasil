@@ -74,12 +74,12 @@ func messageJournalAction(ctx *cli.Context) error {
 
 	var journalEntries []map[string]string
 	args := []interface{}{
-		ctx.Bool("persistent"),
-		ctx.String("worker"),
+		ctx.Uint("truncate_length"),
 		ctx.String("message-id"),
-		ctx.Uint("truncate-length"),
+		ctx.String("worker"),
 		ctx.String("from"),
 		ctx.String("to"),
+		ctx.Bool("persistent"),
 	}
 	obj := conn.Object("com.redhat.Yggdrasil1", "/com/redhat/Yggdrasil1")
 	if err := obj.Call("com.redhat.Yggdrasil1.MessageJournal", dbus.Flags(0), args...).Store(&journalEntries); err != nil {

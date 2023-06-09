@@ -200,7 +200,7 @@ func (c *Client) ListWorkers() (map[string]map[string]string, *dbus.Error) {
 }
 
 // MessageJournal implements the com.redhat.Yggdrasil1.MessageJournal method.
-func (c *Client) MessageJournal(persistent bool, worker string, messageID string, truncateLength int, from string, to string) ([]map[string]string, *dbus.Error) {
+func (c *Client) MessageJournal(truncateLength int, messageID string, worker string, from string, to string, persistent bool) ([]map[string]string, *dbus.Error) {
 	filter := messagejournal.Filter{
 		Persistent:     persistent,
 		TruncateLength: truncateLength,
