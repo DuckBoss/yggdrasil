@@ -39,6 +39,7 @@
             MessageJournal:
             @messages: The set of worker messages.
 
+
             Returns the set of worker messages dispatched to workers and 
             events emitted by workers.
 
@@ -57,12 +58,12 @@
                 ]
         -->
         <method name="MessageJournal">
-            <arg type="t" name="truncate-length" direction="in" />
-            <arg type="s" name="message-id" direction="in" />
+            <arg type="t" name="truncate_length" direction="in" />
+            <arg type="s" name="message_id" direction="in" />
             <arg type="s" name="worker" direction="in" />
-            <arg type="s" name="from", direction="in" />
-            <arg type="s" name="to", direction="in" />
-            <arg type="s" name="persistent", direction="in" />
+            <arg type="s" name="from" direction="in" />
+            <arg type="s" name="to" direction="in" />
+            <arg type="s" name="persistent" direction="in" />
             <arg type="aa{ss}" name="messages" direction="out" />
         </method>
 
