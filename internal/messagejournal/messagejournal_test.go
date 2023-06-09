@@ -1,9 +1,6 @@
 package messagejournal
 
 import (
-	"io/ioutil"
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -27,19 +24,13 @@ var placeholderWorkerMessageEntry = yggdrasil.WorkerMessage{
 }
 
 func TestNew(t *testing.T) {
-	tempDir, err := ioutil.TempDir("/tmp/", "yggd-message-journal-*")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tempDir)
-
 	tests := []struct {
 		description string
 		input       string
 	}{
 		{
 			description: "create message journal",
-			input:       filepath.Join(tempDir, "messagejournal-test.db"),
+			input:       "file::memory:?cache=shared",
 		},
 	}
 
@@ -53,9 +44,6 @@ func TestNew(t *testing.T) {
 			if got == nil {
 				t.Errorf("message journal is null")
 			}
-		})
-		t.Cleanup(func() {
-			os.RemoveAll(filepath.Join(tempDir, "messagejournal-test.db"))
 		})
 	}
 }
@@ -158,17 +146,10 @@ func TestGetEntries(t *testing.T) {
 			},
 		},
 	}
-
-	tempDir, err := ioutil.TempDir("/tmp/", "yggd-message-journal-*")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tempDir)
-
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
 			// Create a message journal to test with:
-			journal, err := New(filepath.Join(tempDir, "messagejournal-test.db"))
+			journal, err := New("file::memory:?cache=shared")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -196,9 +177,6 @@ func TestGetEntries(t *testing.T) {
 				}
 			}
 		})
-		t.Cleanup(func() {
-			os.RemoveAll(tempDir)
-		})
 	}
 }
 
@@ -216,14 +194,9 @@ func TestAddEntry(t *testing.T) {
 		},
 	}
 
-	tempDir, err := ioutil.TempDir("/tmp/", "yggd-message-journal-*")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tempDir)
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
-			messageJournal, err := New(filepath.Join(tempDir, "messagejournal-test.db"))
+			messageJournal, err := New("file::memory:?cache=shared")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -242,9 +215,6 @@ func TestAddEntry(t *testing.T) {
 					t.Errorf("%#v != %#v", *got, test.want)
 				}
 			}
-		})
-		t.Cleanup(func() {
-			os.RemoveAll(filepath.Join(tempDir, "messagejournal-test.db"))
 		})
 	}
 }
