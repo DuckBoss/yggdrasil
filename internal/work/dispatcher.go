@@ -187,7 +187,7 @@ func (d *Dispatcher) Connect() error {
 				}
 
 				d.WorkerEvents <- event
-				
+
 				// Start goroutine to add a new message journal entry.
 				go func() {
 					// Skip adding a new entry if the message journal is disabled.

@@ -12,7 +12,7 @@ import (
 	"github.com/redhatinsights/yggdrasil"
 )
 
-var placeholderWorkerMessageEntry = yggdrasil.WorkerMessage {
+var placeholderWorkerMessageEntry = yggdrasil.WorkerMessage{
 	MessageID:  "test-id",
 	Sent:       time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
 	WorkerName: "test-worker",
