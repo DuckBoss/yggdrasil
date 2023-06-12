@@ -1,8 +1,10 @@
 package messagejournal
 
 import (
+	"bytes"
 	"database/sql"
 	"fmt"
+	"text/template"
 	"time"
 
 	"git.sr.ht/~spc/go-log"
@@ -130,14 +132,17 @@ func (j *MessageJournal) AddEntry(entry yggdrasil.WorkerMessage) (*yggdrasil.Wor
 // that meet the criteria of the provided message journal filter.
 func (j *MessageJournal) GetEntries(filter Filter) ([]map[string]string, error) {
 	entries := []map[string]string{}
-	queryString, queryArgs := j.buildDynamicGetEntriesQuery(filter)
+	queryString, err := j.buildDynamicGetEntriesQuery(filter)
+	if err != nil {
+		return nil, fmt.Errorf("cannot build dynamic sql query: %w", err)
+	}
 
 	preparedQuery, err := j.database.Prepare(queryString)
 	if err != nil {
 		return nil, fmt.Errorf("cannot prepare query when retrieving journal entries: %w", err)
 	}
 
-	rows, err := preparedQuery.Query(queryArgs...)
+	rows, err := preparedQuery.Query()
 	if err != nil {
 		return nil, fmt.Errorf("cannot execute query to retrieve journal entries: %w", err)
 	}
@@ -197,46 +202,40 @@ func (j *MessageJournal) GetEntries(filter Filter) ([]map[string]string, error) 
 // buildDynamicGetEntriesQuery is a utility method that builds the dynamic sql query
 // required to filter journal entry messages from the message journal database
 // when they are retrieved in the 'GetEntries' method.
-// It returns the complete query string and the list of filter arguments that were used.
-func (j *MessageJournal) buildDynamicGetEntriesQuery(filter Filter) (string, []interface{}) {
-	// Build SQL query to retrieve journal entries.
-	// FIXME: It works but I hate it... is there a better
-	// way to do this without an external library?
-	queryArgs := []interface{}{}
-	queryString := "SELECT * FROM "
+func (j *MessageJournal) buildDynamicGetEntriesQuery(filter Filter) (string, error) {
+	var tableName string
 	if filter.Persistent {
-		queryString += fmt.Sprintf("%s ", persistentTableName)
+		tableName = "persistent"
 	} else {
-		queryString += fmt.Sprintf("%s ", runtimeTableName)
+		tableName = "runtime"
 	}
-	if filter.MessageID != "" || filter.Worker != "" || filter.From != "" || filter.To != "" {
-		queryString += "WHERE "
+
+	queryTemplate := template.New("dynamicGetEntriesQuery")
+	queryTemplateParse, err := queryTemplate.Parse(
+		`SELECT * FROM {{.Table}}
+		{{if .MessageID}} INTERSECT SELECT * FROM {{.Table}} WHERE message_id='{{.MessageID}}'{{end}}
+		{{if .Worker}} INTERSECT SELECT * FROM {{.Table}} WHERE worker_name='{{.Worker}}'{{end}}
+		{{if .From}} INTERSECT SELECT * FROM {{.Table}} WHERE sent>='{{.From}}'{{end}}
+		{{if .To}} INTERSECT SELECT * FROM {{.Table}} WHERE sent<='{{.To}}'{{end}}
+		ORDER BY sent`,
+	)
+	if err != nil {
+		return "", fmt.Errorf("cannot parse query template parameters: %w", err)
 	}
-	if filter.MessageID != "" {
-		queryString += "message_id = $1 "
-		queryArgs = append(queryArgs, filter.MessageID)
-		if filter.Worker != "" {
-			queryString += "AND "
-		}
+	var compiledQuery bytes.Buffer
+	queryCompileErr := queryTemplateParse.Execute(&compiledQuery,
+		struct {
+			Table     string
+			MessageID string
+			Worker    string
+			From      string
+			To        string
+		}{
+			tableName, filter.MessageID, filter.Worker, filter.From, filter.To,
+		})
+	if queryCompileErr != nil {
+		return "", fmt.Errorf("cannot compile query template: %w", queryCompileErr)
 	}
-	if filter.Worker != "" {
-		queryString += "worker_name = $2 "
-		queryArgs = append(queryArgs, filter.Worker)
-		if filter.From != "" {
-			queryString += "AND "
-		}
-	}
-	if filter.From != "" {
-		queryString += "sent >= $3 "
-		queryArgs = append(queryArgs, filter.From)
-		if filter.To != "" {
-			queryString += "AND "
-		}
-	}
-	if filter.To != "" {
-		queryString += "sent <= $4 "
-		queryArgs = append(queryArgs, filter.To)
-	}
-	queryString += "ORDER BY sent"
-	return queryString, queryArgs
+	compiledQueryAsString := compiledQuery.String()
+	return compiledQueryAsString, nil
 }
