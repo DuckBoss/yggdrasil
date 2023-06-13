@@ -3,11 +3,15 @@ package messagejournal
 import (
 	"bytes"
 	"database/sql"
+	"embed"
 	"fmt"
 	"text/template"
 	"time"
 
 	"git.sr.ht/~spc/go-log"
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/sqlite"
+	"github.com/golang-migrate/migrate/v4/source/iofs"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/redhatinsights/yggdrasil"
 	"github.com/redhatinsights/yggdrasil/ipc"
@@ -15,6 +19,9 @@ import (
 
 const runtimeTableName string = "runtime"
 const persistentTableName string = "persistent"
+
+//go:embed migrations/*.sql
+var embeddedMigrationData embed.FS
 
 // MessageJournal is a data structure representing the collection
 // of message journal entries received from worker emitted events and messages.
@@ -37,40 +44,55 @@ type Filter struct {
 // of a runtime table that gets cleared on every session start
 // and a persistent table that maintains journal entries across sessions.
 func New(databaseFilePath string) (*MessageJournal, error) {
-	const dropTableTemplate string = "DROP TABLE IF EXISTS %s"
-	const createTableTemplate string = `CREATE TABLE IF NOT EXISTS %s (
-		id INTEGER NOT NULL PRIMARY KEY,
-		message_id VARCHAR(36) NOT NULL,
-		sent DATETIME NOT NULL,
-		worker_name VARCHAR(128) NOT NULL,
-		response_to VARCHAR(36),
-		worker_event INTEGER,
-		worker_message TEXT
-	);`
-
-	var err error
 	db, err := sql.Open("sqlite3", databaseFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("database object not created: %w", err)
 	}
-	messageJournal := MessageJournal{database: db}
+	if err = migrateMessageJournalDB(db, databaseFilePath); err != nil {
+		return nil, fmt.Errorf("database migration error: %w", err)
+	}
 
-	err = db.Ping()
-	if err != nil {
+	messageJournal := MessageJournal{database: db}
+	if err = db.Ping(); err != nil {
 		return nil, fmt.Errorf("message journal database not connected: %w", err)
 	}
 
-	if _, err = db.Exec(fmt.Sprintf(dropTableTemplate, runtimeTableName)); err != nil {
-		return nil, fmt.Errorf("runtime messsage journal table not deleted: %w", err)
+	// Clear the runtime message journal table for the active session.
+	clearRuntimeTableResult, err := db.Exec(fmt.Sprintf("DELETE FROM %s", runtimeTableName))
+	if err != nil {
+		return nil, fmt.Errorf("could not clear journal entries from table '%v': %w", runtimeTableName, err)
 	}
-	if _, err = db.Exec(fmt.Sprintf(createTableTemplate, runtimeTableName)); err != nil {
-		return nil, fmt.Errorf("runtime messsage journal table not created: %w", err)
-	}
-	if _, err = db.Exec(fmt.Sprintf(createTableTemplate, persistentTableName)); err != nil {
-		return nil, fmt.Errorf("persistent messsage journal table not created: %w", err)
+	if _, err = clearRuntimeTableResult.RowsAffected(); err != nil {
+		return nil, fmt.Errorf("could not identify affected rows for table '%v': %w", runtimeTableName, err)
 	}
 
 	return &messageJournal, nil
+}
+
+// migrateMessageJournalDB handles the migration of the message journal
+// database and ensures the schema is up to date on each session start.
+func migrateMessageJournalDB(db *sql.DB, databaseFilePath string) error {
+	databaseDriver, err := sqlite.WithInstance(db, &sqlite.Config{})
+	if err != nil {
+		return fmt.Errorf("database driver not initialized: %w", err)
+	}
+	migrationDriver, err := iofs.New(embeddedMigrationData, "migrations")
+	if err != nil {
+		return fmt.Errorf("embedded migration data not found: %w", err)
+	}
+	migration, err := migrate.NewWithInstance(
+		"iofs",
+		migrationDriver,
+		databaseFilePath,
+		databaseDriver,
+	)
+	if err != nil {
+		return fmt.Errorf("database migration not initialized: %w", err)
+	}
+	if err = migration.Up(); err != nil && err != migrate.ErrNoChange {
+		return fmt.Errorf("database migration failed: %w", err)
+	}
+	return nil
 }
 
 // AddEntry adds a new message journal entry to both the temporary runtime table

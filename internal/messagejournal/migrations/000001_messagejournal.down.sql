@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS runtime;
+DROP TABLE IF EXISTS persistent;
