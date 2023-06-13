@@ -118,7 +118,10 @@ type Data struct {
 	Content    []byte            `json:"content"`
 }
 
-// Worker messages.. TODO
+// Worker messages represent the structure of a journal entry in the
+// optional message journal. These worker messages are created when the
+// dispatcher receives emitted worker event data and when
+// data is dispatched to a worker.
 type WorkerMessage struct {
 	MessageID   string    `json:"message_id"`
 	Sent        time.Time `json:"sent"`
