@@ -227,9 +227,9 @@ func (j *MessageJournal) GetEntries(filter Filter) ([]map[string]string, error) 
 func (j *MessageJournal) buildDynamicGetEntriesQuery(filter Filter) (string, error) {
 	var tableName string
 	if filter.Persistent {
-		tableName = "persistent"
+		tableName = persistentTableName
 	} else {
-		tableName = "runtime"
+		tableName = runtimeTableName
 	}
 
 	queryTemplate := template.New("dynamicGetEntriesQuery")
