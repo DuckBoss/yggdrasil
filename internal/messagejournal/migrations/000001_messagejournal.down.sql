@@ -1,2 +1,1 @@
-DROP TABLE IF EXISTS runtime;
-DROP TABLE IF EXISTS persistent;
+DROP TABLE IF EXISTS journal;

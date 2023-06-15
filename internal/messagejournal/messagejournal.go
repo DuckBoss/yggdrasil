@@ -17,16 +17,18 @@ import (
 	"github.com/redhatinsights/yggdrasil/ipc"
 )
 
-const runtimeTableName string = "runtime"
-const persistentTableName string = "persistent"
+const messageJournalTableName string = "journal"
 
 //go:embed migrations/*.sql
 var embeddedMigrationData embed.FS
 
 // MessageJournal is a data structure representing the collection
 // of message journal entries received from worker emitted events and messages.
+// It also stores the date time of when the journal was initialized to track
+// events and messages in the active session.
 type MessageJournal struct {
-	database *sql.DB
+	database      *sql.DB
+	initializedAt time.Time
 }
 
 // Filter is a data structure representing the filtering options
@@ -52,18 +54,9 @@ func New(databaseFilePath string) (*MessageJournal, error) {
 		return nil, fmt.Errorf("database migration error: %w", err)
 	}
 
-	messageJournal := MessageJournal{database: db}
+	messageJournal := MessageJournal{database: db, initializedAt: time.Now().UTC()}
 	if err = db.Ping(); err != nil {
 		return nil, fmt.Errorf("message journal database not connected: %w", err)
-	}
-
-	// Clear the runtime message journal table for the active session.
-	clearRuntimeTableResult, err := db.Exec(fmt.Sprintf("DELETE FROM %s", runtimeTableName))
-	if err != nil {
-		return nil, fmt.Errorf("could not clear journal entries from table '%v': %w", runtimeTableName, err)
-	}
-	if _, err = clearRuntimeTableResult.RowsAffected(); err != nil {
-		return nil, fmt.Errorf("could not identify affected rows for table '%v': %w", runtimeTableName, err)
 	}
 
 	return &messageJournal, nil
@@ -103,16 +96,12 @@ func (j *MessageJournal) AddEntry(entry yggdrasil.WorkerMessage) (*yggdrasil.Wor
 		message_id, sent, worker_name, response_to, worker_event, worker_message) 
 		values (?,?,?,?,?,?)`
 
-	runtimeAction, err := j.database.Prepare(fmt.Sprintf(insertEntryTemplate, runtimeTableName))
+	insertAction, err := j.database.Prepare(fmt.Sprintf(insertEntryTemplate, messageJournalTableName))
 	if err != nil {
-		return nil, fmt.Errorf("cannot prepare statement for table '%v': %w", runtimeTableName, err)
-	}
-	persistentAction, err := j.database.Prepare(fmt.Sprintf(insertEntryTemplate, persistentTableName))
-	if err != nil {
-		return nil, fmt.Errorf("cannot prepare statement for table '%v': %w", persistentTableName, err)
+		return nil, fmt.Errorf("cannot prepare statement for table '%v': %w", messageJournalTableName, err)
 	}
 
-	runtimeResult, err := runtimeAction.Exec(
+	persistentResult, err := insertAction.Exec(
 		entry.MessageID,
 		entry.Sent,
 		entry.WorkerName,
@@ -121,31 +110,14 @@ func (j *MessageJournal) AddEntry(entry yggdrasil.WorkerMessage) (*yggdrasil.Wor
 		entry.WorkerEvent.EventMessage,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("could not insert journal entry into table '%v': %w", runtimeTableName, err)
-	}
-	persistentResult, err := persistentAction.Exec(
-		entry.MessageID,
-		entry.Sent,
-		entry.WorkerName,
-		entry.ResponseTo,
-		entry.WorkerEvent.EventName,
-		entry.WorkerEvent.EventMessage,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("could not insert journal entry into table '%v': %w", persistentTableName, err)
+		return nil, fmt.Errorf("could not insert journal entry into table '%v': %w", messageJournalTableName, err)
 	}
 
-	runtimeEntryID, err := runtimeResult.LastInsertId()
+	entryID, err := persistentResult.LastInsertId()
 	if err != nil {
-		return nil, fmt.Errorf("could not select last insert ID '%v' for table '%v': %w", runtimeEntryID, runtimeTableName, err)
+		return nil, fmt.Errorf("could not select last insert ID '%v' for table '%v': %w", entryID, messageJournalTableName, err)
 	}
-	log.Debugf("new message journal entry (id: %v) added to table: '%v'", runtimeEntryID, runtimeTableName)
-
-	persistentEntryID, err := persistentResult.LastInsertId()
-	if err != nil {
-		return nil, fmt.Errorf("could not select last insert ID '%v' for table '%v': %w", persistentEntryID, persistentTableName, err)
-	}
-	log.Debugf("new message journal entry (id: %v) added to table: '%v'", persistentEntryID, persistentTableName)
+	log.Debugf("new message journal entry (id: %v) added: '%v'", entryID, entry.MessageID)
 
 	return &entry, nil
 }
@@ -225,13 +197,6 @@ func (j *MessageJournal) GetEntries(filter Filter) ([]map[string]string, error) 
 // required to filter journal entry messages from the message journal database
 // when they are retrieved in the 'GetEntries' method.
 func (j *MessageJournal) buildDynamicGetEntriesQuery(filter Filter) (string, error) {
-	var tableName string
-	if filter.Persistent {
-		tableName = persistentTableName
-	} else {
-		tableName = runtimeTableName
-	}
-
 	queryTemplate := template.New("dynamicGetEntriesQuery")
 	queryTemplateParse, err := queryTemplate.Parse(
 		`SELECT * FROM {{.Table}}
@@ -239,6 +204,7 @@ func (j *MessageJournal) buildDynamicGetEntriesQuery(filter Filter) (string, err
 		{{if .Worker}} INTERSECT SELECT * FROM {{.Table}} WHERE worker_name='{{.Worker}}'{{end}}
 		{{if .From}} INTERSECT SELECT * FROM {{.Table}} WHERE sent>='{{.From}}'{{end}}
 		{{if .To}} INTERSECT SELECT * FROM {{.Table}} WHERE sent<='{{.To}}'{{end}}
+		{{if not .Persistent}} INTERSECT SELECT * FROM {{.Table}} WHERE sent>='{{.InitializedAt}}'{{end}}
 		ORDER BY sent`,
 	)
 	if err != nil {
@@ -247,13 +213,16 @@ func (j *MessageJournal) buildDynamicGetEntriesQuery(filter Filter) (string, err
 	var compiledQuery bytes.Buffer
 	queryCompileErr := queryTemplateParse.Execute(&compiledQuery,
 		struct {
-			Table     string
-			MessageID string
-			Worker    string
-			From      string
-			To        string
+			Table         string
+			InitializedAt string
+			Persistent    bool
+			MessageID     string
+			Worker        string
+			From          string
+			To            string
 		}{
-			tableName, filter.MessageID, filter.Worker, filter.From, filter.To,
+			messageJournalTableName, j.initializedAt.String(), filter.Persistent,
+			filter.MessageID, filter.Worker, filter.From, filter.To,
 		})
 	if queryCompileErr != nil {
 		return "", fmt.Errorf("cannot compile query template: %w", queryCompileErr)
