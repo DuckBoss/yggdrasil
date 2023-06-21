@@ -261,9 +261,9 @@ func main() {
 		}
 		client := NewClient(dispatcher, transporter)
 
-		enableMessageJournal := config.DefaultConfig.MessageJournal
-		if enableMessageJournal != "" {
-			journal, err := messagejournal.New(filepath.Join(enableMessageJournal, "message_journal.db"))
+		messageJournalPath := config.DefaultConfig.MessageJournal
+		if messageJournalPath != "" {
+			journal, err := messagejournal.New(filepath.Join(messageJournalPath, "message_journal.db"))
 			if err != nil {
 				return cli.Exit(fmt.Errorf("cannot initialize message journal database: %w", err), 1)
 			}
