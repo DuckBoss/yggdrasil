@@ -246,18 +246,31 @@ func main() {
 		switch config.DefaultConfig.Protocol {
 		case "mqtt":
 			var err error
-			transporter, err = transport.NewMQTTTransport(config.DefaultConfig.ClientID, config.DefaultConfig.Server, tlsConfig)
+			transporter, err = transport.NewMQTTTransport(
+				config.DefaultConfig.ClientID,
+				config.DefaultConfig.Server,
+				tlsConfig,
+			)
 			if err != nil {
 				return cli.Exit(fmt.Errorf("cannot create MQTT transport: %w", err), 1)
 			}
 		case "http":
 			var err error
-			transporter, err = transport.NewHTTPTransport(config.DefaultConfig.ClientID, config.DefaultConfig.Server[0], tlsConfig, UserAgent, time.Second*5)
+			transporter, err = transport.NewHTTPTransport(
+				config.DefaultConfig.ClientID,
+				config.DefaultConfig.Server[0],
+				tlsConfig,
+				UserAgent,
+				time.Second*5,
+			)
 			if err != nil {
 				return cli.Exit(fmt.Errorf("cannot create HTTP transport: %w", err), 1)
 			}
 		default:
-			return cli.Exit(fmt.Errorf("unsupported transport protocol: %v", config.DefaultConfig.Protocol), 1)
+			return cli.Exit(
+				fmt.Errorf("unsupported transport protocol: %v", config.DefaultConfig.Protocol),
+				1,
+			)
 		}
 		client := NewClient(dispatcher, transporter)
 
@@ -266,7 +279,14 @@ func main() {
 			journalFilePath := filepath.Join(messageJournalPath, "message_journal.db")
 			journal, err := messagejournal.New(journalFilePath)
 			if err != nil {
-				return cli.Exit(fmt.Errorf("cannot initialize message journal database at '%v': %w", journalFilePath, err), 1)
+				return cli.Exit(
+					fmt.Errorf(
+						"cannot initialize message journal database at '%v': %w",
+						journalFilePath,
+						err,
+					),
+					1,
+				)
 			}
 			client.dispatcher.MessageJournal = journal
 			log.Debug("enabled message journal")
@@ -320,7 +340,11 @@ func main() {
 			go func() {
 				c := make(chan notify.EventInfo, 1)
 				if err := notify.Watch(config.DefaultConfig.CanonicalFacts, c, notify.InCloseWrite); err != nil {
-					log.Infof("cannot start watching '%v': %v", config.DefaultConfig.CanonicalFacts, err)
+					log.Infof(
+						"cannot start watching '%v': %v",
+						config.DefaultConfig.CanonicalFacts,
+						err,
+					)
 					return
 				}
 				defer notify.Stop(c)
