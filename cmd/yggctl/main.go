@@ -165,13 +165,13 @@ func main() {
 				&cli.StringFlag{
 					Name:     "from-time",
 					Aliases:  []string{"ft"},
-					Usage:    "Only display worker messages and emitted events sent starting from the timestamp provided.",
+					Usage:    "Only display worker messages and emitted events sent starting from the provided 'YYYY-MM-DD HH:MM:SS' formatted timestamp.",
 					Required: false,
 				},
 				&cli.StringFlag{
 					Name:     "to-time",
 					Aliases:  []string{"tt"},
-					Usage:    "Only display worker messages and emitted events sent up to the timestamp provided.",
+					Usage:    "Only display worker messages and emitted events sent up to the provided 'YYYY-MM-DD HH:MM:SS' formatted timestamp.",
 					Required: false,
 				},
 			},
