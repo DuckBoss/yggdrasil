@@ -132,7 +132,7 @@ func main() {
 		}),
 		altsrc.NewBoolFlag(&cli.BoolFlag{
 			Name:  config.FlagNameMessageJournal,
-			Usage: "Enables a message journal of emitted worker events and messages at the specified `PATH`.",
+			Usage: "Creates a message journal of emitted worker events and messages at the specified directory `PATH`.",
 		}),
 	}
 
