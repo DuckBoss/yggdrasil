@@ -146,7 +146,6 @@ func main() {
 				&cli.UintFlag{
 					Name:     "truncate-message",
 					Aliases:  []string{"t"},
-					Value:    15,
 					Usage:    "Truncates worker event messages if they exceed the specified character count.",
 					Required: false,
 				},
@@ -173,6 +172,12 @@ func main() {
 					Aliases:  []string{"tt"},
 					Usage:    "Only display worker messages and emitted events sent up to the provided 'YYYY-MM-DD HH:MM:SS' formatted timestamp.",
 					Required: false,
+				},
+				&cli.StringFlag{
+					Name:    "format",
+					Aliases: []string{"f"},
+					Usage:   "Print output in `FORMAT` (json, table or text)",
+					Value:   "table",
 				},
 			},
 			Action: messageJournalAction,

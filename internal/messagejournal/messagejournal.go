@@ -165,7 +165,7 @@ func (j *MessageJournal) GetEntries(filter Filter) ([]map[string]string, error) 
 
 		// Truncate the worker messages by the truncate length specified.
 		messageMaxSize := len(workerEventMessage)
-		if messageMaxSize >= filter.TruncateLength {
+		if messageMaxSize >= filter.TruncateLength && filter.TruncateLength > 0 {
 			messageMaxSize = filter.TruncateLength
 			workerEventMessage = fmt.Sprintf("%+v...", workerEventMessage[:messageMaxSize])
 		}
