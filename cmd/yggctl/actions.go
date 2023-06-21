@@ -77,8 +77,8 @@ func messageJournalAction(ctx *cli.Context) error {
 		ctx.Uint("truncate-message"),
 		ctx.String("message-id"),
 		ctx.String("worker"),
-		ctx.String("from"),
-		ctx.String("to"),
+		ctx.String("from-time"),
+		ctx.String("to-time"),
 		ctx.Bool("persistent"),
 	}
 	obj := conn.Object("com.redhat.Yggdrasil1", "/com/redhat/Yggdrasil1")
