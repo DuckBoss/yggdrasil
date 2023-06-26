@@ -156,8 +156,7 @@ func TestGetEntries(t *testing.T) {
 
 			// Add entries from test input data:
 			for _, entry := range test.entries {
-				_, err := journal.AddEntry(entry)
-				if err != nil {
+				if err := journal.AddEntry(entry); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -184,13 +183,11 @@ func TestAddEntry(t *testing.T) {
 	tests := []struct {
 		description string
 		input       yggdrasil.WorkerMessage
-		want        yggdrasil.WorkerMessage
 		wantError   error
 	}{
 		{
 			description: "create journal entry",
 			input:       placeholderWorkerMessageEntry,
-			want:        placeholderWorkerMessageEntry,
 		},
 	}
 
@@ -201,8 +198,7 @@ func TestAddEntry(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			got, err := messageJournal.AddEntry(test.input)
-
+			err = messageJournal.AddEntry(test.input)
 			if test.wantError != nil {
 				if !cmp.Equal(err, test.wantError, cmpopts.EquateErrors()) {
 					t.Errorf("%#v != %#v", err, test.wantError)
@@ -210,9 +206,6 @@ func TestAddEntry(t *testing.T) {
 			} else {
 				if err != nil {
 					t.Fatal(err)
-				}
-				if !cmp.Equal(*got, test.want) {
-					t.Errorf("%#v != %#v", *got, test.want)
 				}
 			}
 		})

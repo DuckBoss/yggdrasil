@@ -207,8 +207,7 @@ func (d *Dispatcher) Connect() error {
 							EventMessage: event.Message,
 						},
 					}
-					_, err := d.MessageJournal.AddEntry(workerMessage)
-					if err != nil {
+					if err := d.MessageJournal.AddEntry(workerMessage); err != nil {
 						log.Errorf("cannot add journal entry: %v", err)
 					}
 				}()
@@ -293,8 +292,7 @@ func (d *Dispatcher) Dispatch(data yggdrasil.Data) error {
 				EventMessage string "json:\"event_message\""
 			}{},
 		}
-		_, err := d.MessageJournal.AddEntry(workerMessage)
-		if err != nil {
+		if err := d.MessageJournal.AddEntry(workerMessage); err != nil {
 			log.Errorf("cannot add journal entry: %v", err)
 		}
 	}()

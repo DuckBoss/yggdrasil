@@ -91,14 +91,14 @@ func migrateMessageJournalDB(db *sql.DB, databaseFilePath string) error {
 // AddEntry adds a new message journal entry to both the temporary runtime table
 // which gets cleared at the start of every session and the persistent table
 // which maintains message entries across multiple sessions.
-func (j *MessageJournal) AddEntry(entry yggdrasil.WorkerMessage) (*yggdrasil.WorkerMessage, error) {
+func (j *MessageJournal) AddEntry(entry yggdrasil.WorkerMessage) error {
 	const insertEntryTemplate string = `INSERT INTO %s (
 		message_id, sent, worker_name, response_to, worker_event, worker_message) 
 		values (?,?,?,?,?,?)`
 
 	insertAction, err := j.database.Prepare(fmt.Sprintf(insertEntryTemplate, messageJournalTableName))
 	if err != nil {
-		return nil, fmt.Errorf("cannot prepare statement for table '%v': %w", messageJournalTableName, err)
+		return fmt.Errorf("cannot prepare statement for table '%v': %w", messageJournalTableName, err)
 	}
 
 	persistentResult, err := insertAction.Exec(
@@ -110,16 +110,16 @@ func (j *MessageJournal) AddEntry(entry yggdrasil.WorkerMessage) (*yggdrasil.Wor
 		entry.WorkerEvent.EventMessage,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("could not insert journal entry into table '%v': %w", messageJournalTableName, err)
+		return fmt.Errorf("could not insert journal entry into table '%v': %w", messageJournalTableName, err)
 	}
 
 	entryID, err := persistentResult.LastInsertId()
 	if err != nil {
-		return nil, fmt.Errorf("could not select last insert ID '%v' for table '%v': %w", entryID, messageJournalTableName, err)
+		return fmt.Errorf("could not select last insert ID '%v' for table '%v': %w", entryID, messageJournalTableName, err)
 	}
 	log.Debugf("new message journal entry (id: %v) added: '%v'", entryID, entry.MessageID)
 
-	return &entry, nil
+	return nil
 }
 
 // GetEntries retrieves a list of all the journal entries in the message journal database
