@@ -190,6 +190,10 @@ func (j *MessageJournal) GetEntries(filter Filter) ([]map[string]string, error) 
 		return nil, fmt.Errorf("cannot close journal entry rows: %w", err)
 	}
 
+	if len(entries) == 0 {
+		return nil, fmt.Errorf("no journal entries found")
+	}
+
 	return entries, nil
 }
 
