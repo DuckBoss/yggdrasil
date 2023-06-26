@@ -181,13 +181,13 @@ func (j *MessageJournal) GetEntries(filter Filter) ([]map[string]string, error) 
 		}
 		entries = append(entries, newMessage)
 	}
-	rowIterationErr := rows.Err()
-	if rowIterationErr != nil {
-		return nil, fmt.Errorf("cannot iterate queried journal entries: %w", rowIterationErr)
+	err = rows.Err()
+	if err != nil {
+		return nil, fmt.Errorf("cannot iterate queried journal entries: %w", err)
 	}
-	closeErr := rows.Close()
-	if closeErr != nil {
-		return nil, fmt.Errorf("cannot close journal entry rows: %w", closeErr)
+	err = rows.Close()
+	if err != nil {
+		return nil, fmt.Errorf("cannot close journal entry rows: %w", err)
 	}
 
 	return entries, nil
@@ -211,7 +211,7 @@ func (j *MessageJournal) buildDynamicGetEntriesQuery(filter Filter) (string, err
 		return "", fmt.Errorf("cannot parse query template parameters: %w", err)
 	}
 	var compiledQuery bytes.Buffer
-	queryCompileErr := queryTemplateParse.Execute(&compiledQuery,
+	err = queryTemplateParse.Execute(&compiledQuery,
 		struct {
 			Table         string
 			InitializedAt string
@@ -224,8 +224,8 @@ func (j *MessageJournal) buildDynamicGetEntriesQuery(filter Filter) (string, err
 			messageJournalTableName, j.initializedAt.String(), filter.Persistent,
 			filter.MessageID, filter.Worker, filter.From, filter.To,
 		})
-	if queryCompileErr != nil {
-		return "", fmt.Errorf("cannot compile query template: %w", queryCompileErr)
+	if err != nil {
+		return "", fmt.Errorf("cannot compile query template: %w", err)
 	}
 	compiledQueryAsString := compiledQuery.String()
 	return compiledQueryAsString, nil
