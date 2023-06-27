@@ -135,7 +135,7 @@ func main() {
 			Name:        "message-journal",
 			Usage:       "Display a list of all worker messages and emitted events",
 			UsageText:   "yggctl message-journal",
-			Description: "The message-journal command sends a dbus call to yggdrasil to retrieve a message journal containing all worker messages and emitted events",
+			Description: "The message-journal command retrieves a message list containing all worker messages and emitted events",
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
 					Name:     "persistent",
