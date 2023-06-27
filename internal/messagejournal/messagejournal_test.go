@@ -65,8 +65,8 @@ func TestGetEntries(t *testing.T) {
 				TruncateLength: 100,
 				MessageID:      "",
 				Worker:         "",
-				From:           "",
-				To:             "",
+				Since:          "",
+				Until:          "",
 			},
 			wantError: fmt.Errorf("no journal entries found"),
 		},
@@ -80,8 +80,8 @@ func TestGetEntries(t *testing.T) {
 				TruncateLength: 100,
 				MessageID:      "",
 				Worker:         "",
-				From:           "",
-				To:             "",
+				Since:          "",
+				Until:          "",
 			},
 			want: []map[string]string{
 				0: {
@@ -104,8 +104,8 @@ func TestGetEntries(t *testing.T) {
 				TruncateLength: 100,
 				MessageID:      "test-invalid-filtered-message-id",
 				Worker:         "",
-				From:           "",
-				To:             "",
+				Since:          "",
+				Until:          "",
 			},
 			wantError: fmt.Errorf("no journal entries found"),
 		},
@@ -132,8 +132,8 @@ func TestGetEntries(t *testing.T) {
 				TruncateLength: 100,
 				MessageID:      "test-filtered-message-id",
 				Worker:         "",
-				From:           "",
-				To:             "",
+				Since:          "",
+				Until:          "",
 			},
 			want: []map[string]string{
 				0: {

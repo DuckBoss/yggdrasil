@@ -40,8 +40,8 @@
             @truncate_length: The maximum length of worker message content.
             @message_id: Filter journal entries to only contain entries with this message id value.
             @worker: Filter journal entries to only contain entries with this worker name.
-            @from: Filter journal entries to only contain entries from this date time value.
-            @to: Filter journal entries to only contain entries up to this date time value.
+            @since: Filter journal entries to only contain entries from this date time value.
+            @until: Filter journal entries to only contain entries up to this date time value.
             @persistent: Filter journal entries to only contain entries from the persistent collection of
             journal entries spanning multiple sessions. By default, journal entries are collected from
             the active session.
@@ -62,8 +62,8 @@
             <arg type="t" name="truncate_length" direction="in" />
             <arg type="s" name="message_id" direction="in" />
             <arg type="s" name="worker" direction="in" />
-            <arg type="s" name="from" direction="in" />
-            <arg type="s" name="to" direction="in" />
+            <arg type="s" name="since" direction="in" />
+            <arg type="s" name="until" direction="in" />
             <arg type="s" name="persistent" direction="in" />
             <arg type="aa{ss}" name="messages" direction="out" />
         </method>

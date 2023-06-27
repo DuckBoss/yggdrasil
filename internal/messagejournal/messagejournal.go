@@ -38,8 +38,8 @@ type Filter struct {
 	TruncateLength int
 	MessageID      string
 	Worker         string
-	From           string
-	To             string
+	Since          string
+	Until          string
 }
 
 // New initializes a message journal sqlite database consisting
@@ -206,8 +206,8 @@ func (j *MessageJournal) buildDynamicGetEntriesQuery(filter Filter) (string, err
 		`SELECT * FROM {{.Table}}
 		{{if .MessageID}} INTERSECT SELECT * FROM {{.Table}} WHERE message_id='{{.MessageID}}'{{end}}
 		{{if .Worker}} INTERSECT SELECT * FROM {{.Table}} WHERE worker_name='{{.Worker}}'{{end}}
-		{{if .From}} INTERSECT SELECT * FROM {{.Table}} WHERE sent>='{{.From}}'{{end}}
-		{{if .To}} INTERSECT SELECT * FROM {{.Table}} WHERE sent<='{{.To}}'{{end}}
+		{{if .Since}} INTERSECT SELECT * FROM {{.Table}} WHERE sent>='{{.Since}}'{{end}}
+		{{if .Until}} INTERSECT SELECT * FROM {{.Table}} WHERE sent<='{{.Until}}'{{end}}
 		{{if not .Persistent}} INTERSECT SELECT * FROM {{.Table}} WHERE sent>='{{.InitializedAt}}'{{end}}
 		ORDER BY sent`,
 	)
@@ -222,11 +222,11 @@ func (j *MessageJournal) buildDynamicGetEntriesQuery(filter Filter) (string, err
 			Persistent    bool
 			MessageID     string
 			Worker        string
-			From          string
-			To            string
+			Since         string
+			Until         string
 		}{
 			messageJournalTableName, j.initializedAt.String(), filter.Persistent,
-			filter.MessageID, filter.Worker, filter.From, filter.To,
+			filter.MessageID, filter.Worker, filter.Since, filter.Until,
 		})
 	if err != nil {
 		return "", fmt.Errorf("cannot compile query template: %w", err)
