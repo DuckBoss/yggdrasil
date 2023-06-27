@@ -1,9 +1,7 @@
 package main
 
 import (
-	"errors"
 	"fmt"
-	"io/fs"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -132,7 +130,7 @@ func main() {
 		}),
 		altsrc.NewBoolFlag(&cli.BoolFlag{
 			Name:  config.FlagNameMessageJournal,
-			Usage: "Creates a message journal of emitted worker events and messages at the specified directory `PATH`.",
+			Usage: "Record worker events and messages in the database `FILE`",
 		}),
 	}
 
@@ -278,19 +276,7 @@ func main() {
 
 		messageJournalPath := config.DefaultConfig.MessageJournal
 		if messageJournalPath != "" {
-			journalFilePath := filepath.Join(messageJournalPath, "message_journal.db")
-
-			if _, err := os.Stat(messageJournalPath); errors.Is(err, fs.ErrNotExist) {
-				if errMkDir := os.MkdirAll(messageJournalPath, 0750); errMkDir != nil {
-					return fmt.Errorf(
-						"cannot create message journal directory at '%v': %w",
-						journalFilePath,
-						err,
-					)
-				}
-				log.Debugf("created message journal at: '%v'", journalFilePath)
-			}
-
+			journalFilePath := filepath.Join(messageJournalPath)
 			journal, err := messagejournal.New(journalFilePath)
 			if err != nil {
 				return cli.Exit(
