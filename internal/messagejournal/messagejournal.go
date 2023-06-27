@@ -131,7 +131,7 @@ func (j *MessageJournal) GetEntries(filter Filter) ([]map[string]string, error) 
 
 	preparedQuery, err := j.database.Prepare(queryString)
 	if err != nil {
-		return nil, fmt.Errorf("cannot prepare query when retrieving journal entries: %w", err)
+		return nil, fmt.Errorf("cannot prepare query to retrieve journal entries: %w", err)
 	}
 
 	rows, err := preparedQuery.Query()
