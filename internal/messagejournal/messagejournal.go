@@ -43,8 +43,7 @@ type Filter struct {
 }
 
 // New initializes a message journal sqlite database consisting
-// of a runtime table that gets cleared on every session start
-// and a persistent table that maintains journal entries across sessions.
+// of a persistent table that maintains journal entries across sessions.
 func New(databaseFilePath string) (*MessageJournal, error) {
 	db, err := sql.Open("sqlite3", databaseFilePath)
 	if err != nil {
@@ -88,9 +87,8 @@ func migrateMessageJournalDB(db *sql.DB, databaseFilePath string) error {
 	return nil
 }
 
-// AddEntry adds a new message journal entry to both the temporary runtime table
-// which gets cleared at the start of every session and the persistent table
-// which maintains message entries across multiple sessions.
+// AddEntry adds a new message journal entry to the persistent table
+// in the database.
 func (j *MessageJournal) AddEntry(entry yggdrasil.WorkerMessage) error {
 	const insertEntryTemplate string = `INSERT INTO %s (
 		message_id, sent, worker_name, response_to, worker_event, worker_message) 
