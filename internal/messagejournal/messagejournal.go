@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"embed"
 	"fmt"
+	"reflect"
 	"text/template"
 	"time"
 
@@ -40,6 +41,18 @@ type Filter struct {
 	Worker         string
 	Since          string
 	Until          string
+}
+
+type errorJournal struct {
+	err interface{}
+}
+
+func (e *errorJournal) Error() string {
+	return fmt.Sprintf("%v", e.err)
+}
+
+func (e *errorJournal) Is(o error) bool {
+	return reflect.TypeOf(e) == reflect.TypeOf(o)
 }
 
 // New initializes a message journal sqlite database consisting
@@ -189,7 +202,7 @@ func (j *MessageJournal) GetEntries(filter Filter) ([]map[string]string, error) 
 	}
 
 	if len(entries) == 0 {
-		return nil, fmt.Errorf("no journal entries found")
+		return nil, &errorJournal{fmt.Errorf("no journal entries found")}
 	}
 
 	return entries, nil

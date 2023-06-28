@@ -1,7 +1,6 @@
 package messagejournal
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -68,7 +67,7 @@ func TestGetEntries(t *testing.T) {
 				Since:          "",
 				Until:          "",
 			},
-			wantError: fmt.Errorf("no journal entries found"),
+			wantError: &errorJournal{"no journal entries found"},
 		},
 		{
 			description: "get journal entries - unfiltered results",
@@ -107,7 +106,7 @@ func TestGetEntries(t *testing.T) {
 				Since:          "",
 				Until:          "",
 			},
-			wantError: fmt.Errorf("no journal entries found"),
+			wantError: &errorJournal{"no journal entries found"},
 		},
 		{
 			description: "get journal entries - filtered results",
