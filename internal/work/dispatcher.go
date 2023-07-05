@@ -140,11 +140,21 @@ func (d *Dispatcher) Connect() error {
 				event.Name = ipc.WorkerEventName(eventName)
 				event.Worker = strings.TrimPrefix(dest, "com.redhat.Yggdrasil1.Worker1.")
 
+				eventMessageID, ok := s.Body[1].(string)
+				if !ok {
+					log.Errorf("cannot convert %T to string", s.Body[1])
+					continue
+				}
+				event.MessageID = eventMessageID
+
 				eventMessageData, ok := s.Body[2].(map[string]string)
 				if !ok {
 					log.Errorf("cannot convert %T to map[string]string", s.Body[2])
 					continue
 				}
+
+				event.ResponseTo = eventMessageData["responseTo"]
+				event.Message = eventMessageData["message"]
 
 				eventOptionalResponseTo, ok := eventMessageData["responseTo"]
 				if ok {
@@ -169,7 +179,7 @@ func (d *Dispatcher) Connect() error {
 						MessageID:  event.MessageID,
 						Sent:       time.Now().UTC(),
 						WorkerName: event.Worker,
-						ResponseTo: "",
+						ResponseTo: event.ResponseTo,
 						WorkerEvent: struct {
 							EventName    uint   "json:\"event_name\""
 							EventMessage string "json:\"event_message\""
@@ -247,26 +257,6 @@ func (d *Dispatcher) Dispatch(data yggdrasil.Data) error {
 	d.features.Set(data.Directive, features)
 	d.Dispatchers <- d.FlattenDispatchers()
 
-	// Start goroutine to add a new message journal entry.
-	go func() {
-		// Skip adding a new entry if the message journal is disabled.
-		if d.MessageJournal == nil {
-			return
-		}
-		workerMessage := yggdrasil.WorkerMessage{
-			MessageID:  data.MessageID,
-			Sent:       data.Sent.UTC(),
-			WorkerName: data.Directive,
-			ResponseTo: data.ResponseTo,
-			WorkerEvent: struct {
-				EventName    uint   "json:\"event_name\""
-				EventMessage string "json:\"event_message\""
-			}{},
-		}
-		if err := d.MessageJournal.AddEntry(workerMessage); err != nil {
-			log.Errorf("cannot add journal entry: %v", err)
-		}
-	}()
 	return nil
 }
 
