@@ -139,52 +139,13 @@ func (d *Dispatcher) Connect() error {
 				}
 				event.Name = ipc.WorkerEventName(eventName)
 				event.Worker = strings.TrimPrefix(dest, "com.redhat.Yggdrasil1.Worker1.")
-				var workerMessageID string
 
-				switch ipc.WorkerEventName(eventName) {
-				case ipc.WorkerEventNameWorking:
-					if len(s.Body) != 3 {
-						log.Errorf("invalid number of parameters in the emitted worker event: %s", event.Worker)
-						continue
-					}
-					eventId, ok := s.Body[1].(string)
-					if !ok {
-						log.Errorf("cannot convert %T to string", s.Body[1])
-						continue
-					}
-					eventMessage, ok := s.Body[2].(string)
-					if !ok {
-						log.Errorf("cannot convert %T to string", s.Body[2])
-						continue
-					}
-					event.Message = eventMessage
-					workerMessageID = eventId
-				case ipc.WorkerEventNameBegin:
-					if len(s.Body) != 2 {
-						log.Errorf("invalid number of parameters in the emitted worker event: %s", event.Worker)
-						continue
-					}
-					eventID, ok := s.Body[1].(string)
-					if !ok {
-						log.Errorf("cannot convert %T to string", s.Body[1])
-						continue
-					}
-					workerMessageID = eventID
-				case ipc.WorkerEventNameEnd:
-					if len(s.Body) != 2 {
-						log.Errorf("invalid number of parameters in the emitted worker event: %s", event.Worker)
-						continue
-					}
-					eventID, ok := s.Body[1].(string)
-					if !ok {
-						log.Errorf("cannot convert %T to string", s.Body[1])
-						continue
-					}
-					workerMessageID = eventID
-				default:
-					log.Errorf("unhandled worker event type: %v", ipc.WorkerEventName(eventName))
+				eventMessageData, ok := s.Body[2].(map[string]string)
+				if !ok {
+					log.Errorf("cannot convert %T to map[string]string", s.Body[2])
 					continue
 				}
+				event.Message = eventMessageData["message"]
 
 				d.WorkerEvents <- event
 
@@ -195,7 +156,7 @@ func (d *Dispatcher) Connect() error {
 						return
 					}
 					workerMessage := yggdrasil.WorkerMessage{
-						MessageID:  workerMessageID,
+						MessageID:  event.MessageID,
 						Sent:       time.Now().UTC(),
 						WorkerName: event.Worker,
 						ResponseTo: "",

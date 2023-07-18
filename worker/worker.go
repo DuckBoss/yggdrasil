@@ -158,11 +158,14 @@ func (w *Worker) Transmit(addr string, id string, responseTo string, metadata ma
 	return
 }
 
-// EmitEvent emits a WorkerEvent, worker message id, and an optional message.
+// EmitEvent emits a WorkerEvent, worker message id, and key-value pairs of optional data.
 func (w *Worker) EmitEvent(event ipc.WorkerEventName, messageID string, message string) error {
-	args := []interface{}{event, messageID}
-	if message != "" {
-		args = append(args, message)
+	args := []interface{}{
+		event,
+		messageID,
+		map[string]string{
+			"message": message,
+		},
 	}
 	log.Debugf("emitting event %v", event)
 	return w.conn.Emit(dbus.ObjectPath(path.Join("/com/redhat/Yggdrasil1/Worker1", w.directive)), "com.redhat.Yggdrasil1.Worker1.Event", args...)
