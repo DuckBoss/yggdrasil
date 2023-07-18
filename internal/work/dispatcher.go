@@ -145,6 +145,16 @@ func (d *Dispatcher) Connect() error {
 					log.Errorf("cannot convert %T to map[string]string", s.Body[2])
 					continue
 				}
+
+				eventOptionalResponseTo, ok := eventMessageData["responseTo"]
+				if ok {
+					event.ResponseTo = eventOptionalResponseTo
+				}
+
+				eventOptionalMessage, ok := eventMessageData["message"]
+				if ok {
+					event.Message = eventOptionalMessage
+				}
 				event.Message = eventMessageData["message"]
 
 				d.WorkerEvents <- event

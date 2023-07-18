@@ -73,6 +73,7 @@
             @worker: Name of the worker emitting the event.
             @name: Name of the event.
             @message_id: The id associated with the worker message.
+            @response_to: The id of the message this event is in reply to, if any.
             @message: Optional message included with the event.
 
             Emitted by a worker when certain conditions arise, such as beginning
@@ -95,6 +96,7 @@
             <arg type="s" name="worker" />
             <arg type="u" name="name" />
             <arg type="s" name="message_id" />
+            <arg type="s" name="response_to" />
             <arg type="s" name="message" />
         </signal>
     </interface>

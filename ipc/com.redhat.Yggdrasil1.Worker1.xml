@@ -46,7 +46,9 @@
             Event:
             @name: Name of the event.
             @message_id: The id associated with the worker message.
-            @data: Key-value pairs of optional data provided with the event.
+            @response_to: The id of the message this event is in reply to, if any.
+            @data: Optional key-value pairs of data containing the message and responseTo
+              fields with the event.
 
             Emitted by a worker when certain conditions arise, such as beginning
             or ending work.
