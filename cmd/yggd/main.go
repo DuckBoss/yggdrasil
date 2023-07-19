@@ -128,9 +128,10 @@ func main() {
 			Value:  true,
 			Hidden: true,
 		}),
-		altsrc.NewBoolFlag(&cli.BoolFlag{
-			Name:  config.FlagNameMessageJournal,
-			Usage: "Record worker events and messages in the database `FILE`",
+		altsrc.NewPathFlag(&cli.PathFlag{
+			Name:      config.FlagNameMessageJournal,
+			Usage:     "Record worker events and messages in the database `FILE`",
+			TakesFile: true,
 		}),
 	}
 
