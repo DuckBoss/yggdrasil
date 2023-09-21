@@ -107,7 +107,6 @@ func messageJournalAction(ctx *cli.Context) error {
 
 	var journalEntries []map[string]string
 	args := []interface{}{
-		ctx.Uint("truncate-message"),
 		ctx.String("message-id"),
 		ctx.String("worker"),
 		ctx.String("since"),

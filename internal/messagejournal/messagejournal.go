@@ -37,12 +37,11 @@ type MessageJournal struct {
 // Filter is a data structure representing the filtering options
 // that are used when message journal entries are retrieved by yggctl.
 type Filter struct {
-	Persistent     bool
-	TruncateLength int
-	MessageID      string
-	Worker         string
-	Since          string
-	Until          string
+	Persistent bool
+	MessageID  string
+	Worker     string
+	Since      string
+	Until      string
 }
 
 type errorJournal struct {
@@ -185,29 +184,6 @@ func (j *MessageJournal) GetEntries(filter Filter) ([]map[string]string, error) 
 			return nil, fmt.Errorf("cannot scan journal entry columns: %w", err)
 		}
 
-		// Truncate the worker messages by the truncate length specified.
-		// This process requires unmarshalling the worker event data,
-		// extracting the message field (if any), and truncating the message.
-		var eventData map[string]string
-		err = json.Unmarshal([]byte(workerEventData), &eventData)
-		if err != nil {
-			return nil, fmt.Errorf("cannot unmarshal worker event data: %w", err)
-		}
-
-		workerEventMessage, ok := eventData["message"]
-		if ok {
-			messageMaxSize := len(workerEventMessage)
-			if messageMaxSize >= filter.TruncateLength && filter.TruncateLength > 0 {
-				messageMaxSize = filter.TruncateLength
-				eventData["message"] = fmt.Sprintf("%+v...", eventData["message"][:messageMaxSize])
-			}
-		}
-
-		truncatedEventData, err := json.Marshal(eventData)
-		if err != nil {
-			return nil, fmt.Errorf("cannot marshal worker event data after truncating message: %w", err)
-		}
-
 		// Convert the entry properties into a string format and append to the list of entries.
 		newMessage := map[string]string{
 			"message_id":   messageID,
@@ -215,7 +191,7 @@ func (j *MessageJournal) GetEntries(filter Filter) ([]map[string]string, error) 
 			"worker_name":  workerName,
 			"response_to":  responseTo,
 			"worker_event": ipc.WorkerEventName(workerEvent).String(),
-			"worker_data":  string(truncatedEventData),
+			"worker_data":  workerEventData,
 		}
 		entries = append(entries, newMessage)
 	}
