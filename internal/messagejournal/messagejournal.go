@@ -31,6 +31,7 @@ var embeddedMigrationData embed.FS
 type MessageJournal struct {
 	database      *sql.DB
 	initializedAt time.Time
+	lastUpdated   time.Time
 }
 
 // Filter is a data structure representing the filtering options
@@ -67,7 +68,8 @@ func New(databaseFilePath string) (*MessageJournal, error) {
 		return nil, fmt.Errorf("database migration error: %w", err)
 	}
 
-	messageJournal := MessageJournal{database: db, initializedAt: time.Now().UTC()}
+	initTime := time.Now().UTC()
+	messageJournal := MessageJournal{database: db, initializedAt: initTime, lastUpdated: initTime}
 	if err = db.Ping(); err != nil {
 		return nil, fmt.Errorf("message journal database not connected: %w", err)
 	}
@@ -135,6 +137,8 @@ func (j *MessageJournal) AddEntry(entry yggdrasil.WorkerMessage) error {
 	if err != nil {
 		return fmt.Errorf("could not select last insert ID '%v' for table '%v': %w", entryID, messageJournalTableName, err)
 	}
+	j.lastUpdated = time.Now().UTC()
+
 	log.Debugf("new message journal entry (id: %v) added: '%v'", entryID, entry.MessageID)
 
 	return nil
