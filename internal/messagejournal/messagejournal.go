@@ -109,15 +109,25 @@ func (j *MessageJournal) AddEntry(entry yggdrasil.WorkerMessage) error {
 		message_id, sent, worker_name, response_to, worker_event, worker_data)
 		values (?,?,?,?,?,?)`
 
-	insertAction, err := j.database.Prepare(fmt.Sprintf(insertEntryTemplate, messageJournalTableName))
+	insertAction, err := j.database.Prepare(
+		fmt.Sprintf(insertEntryTemplate, messageJournalTableName),
+	)
 	if err != nil {
-		return fmt.Errorf("cannot prepare statement for table '%v': %w", messageJournalTableName, err)
+		return fmt.Errorf(
+			"cannot prepare statement for table '%v': %w",
+			messageJournalTableName,
+			err,
+		)
 	}
 
 	// JSON-encode the event data to make it compatible for database insertion.
 	encodedEventData, err := json.Marshal(entry.WorkerEvent.EventData)
 	if err != nil {
-		return fmt.Errorf("cannot prepare statement for table '%v': %w", messageJournalTableName, err)
+		return fmt.Errorf(
+			"cannot prepare statement for table '%v': %w",
+			messageJournalTableName,
+			err,
+		)
 	}
 
 	persistentResult, err := insertAction.Exec(
@@ -129,12 +139,21 @@ func (j *MessageJournal) AddEntry(entry yggdrasil.WorkerMessage) error {
 		string(encodedEventData),
 	)
 	if err != nil {
-		return fmt.Errorf("could not insert journal entry into table '%v': %w", messageJournalTableName, err)
+		return fmt.Errorf(
+			"could not insert journal entry into table '%v': %w",
+			messageJournalTableName,
+			err,
+		)
 	}
 
 	entryID, err := persistentResult.LastInsertId()
 	if err != nil {
-		return fmt.Errorf("could not select last insert ID '%v' for table '%v': %w", entryID, messageJournalTableName, err)
+		return fmt.Errorf(
+			"could not select last insert ID '%v' for table '%v': %w",
+			entryID,
+			messageJournalTableName,
+			err,
+		)
 	}
 	j.lastUpdated = time.Now().UTC()
 
