@@ -37,7 +37,6 @@
 
         <!--
             MessageJournal:
-            @truncate_length: The maximum length of worker message content.
             @message_id: Filter journal entries to only contain entries with this message id value.
             @worker: Filter journal entries to only contain entries with this worker name.
             @since: Filter journal entries to only contain entries from this date time value.
@@ -59,7 +58,6 @@
             events emitted by workers.
         -->
         <method name="MessageJournal">
-            <arg type="t" name="truncate_length" direction="in" />
             <arg type="s" name="message_id" direction="in" />
             <arg type="s" name="worker" direction="in" />
             <arg type="s" name="since" direction="in" />
