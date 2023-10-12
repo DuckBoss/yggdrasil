@@ -54,9 +54,9 @@ func (e *errorJournal) Is(o error) bool {
 	return reflect.TypeOf(e) == reflect.TypeOf(o)
 }
 
-// New initializes a message journal sqlite database consisting
+// Open initializes a message journal sqlite database consisting
 // of a persistent table that maintains journal entries across sessions.
-func New(databaseFilePath string) (*MessageJournal, error) {
+func Open(databaseFilePath string) (*MessageJournal, error) {
 	db, err := sql.Open("sqlite3", databaseFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("database object not created: %w", err)

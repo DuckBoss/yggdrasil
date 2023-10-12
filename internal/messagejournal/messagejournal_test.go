@@ -24,7 +24,7 @@ var placeholderWorkerMessageEntry = yggdrasil.WorkerMessage{
 	},
 }
 
-func TestNew(t *testing.T) {
+func TestOpen(t *testing.T) {
 	tests := []struct {
 		description string
 		input       string
@@ -37,7 +37,7 @@ func TestNew(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
-			got, err := New(test.input)
+			got, err := Open(test.input)
 
 			if err != nil {
 				t.Fatal(err)
@@ -146,7 +146,7 @@ func TestGetEntries(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
 			// Create a message journal to test with:
-			journal, err := New("file::memory:?cache=shared")
+			journal, err := Open("file::memory:?cache=shared")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -190,7 +190,7 @@ func TestAddEntry(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
-			messageJournal, err := New("file::memory:?cache=shared")
+			messageJournal, err := Open("file::memory:?cache=shared")
 			if err != nil {
 				t.Fatal(err)
 			}
