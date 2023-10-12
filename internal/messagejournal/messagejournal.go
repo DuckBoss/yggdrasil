@@ -43,7 +43,7 @@ type Filter struct {
 }
 
 type errorJournal struct {
-	err interface{}
+	err error
 }
 
 func (e *errorJournal) Error() string {
