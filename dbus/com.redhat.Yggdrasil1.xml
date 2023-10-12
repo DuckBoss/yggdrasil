@@ -62,7 +62,7 @@
             <arg type="s" name="worker" direction="in" />
             <arg type="s" name="since" direction="in" />
             <arg type="s" name="until" direction="in" />
-            <arg type="s" name="persistent" direction="in" />
+            <arg type="b" name="persistent" direction="in" />
             <arg type="aa{ss}" name="messages" direction="out" />
         </method>
 
