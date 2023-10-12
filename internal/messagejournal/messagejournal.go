@@ -19,8 +19,6 @@ import (
 	"github.com/redhatinsights/yggdrasil/ipc"
 )
 
-const messageJournalTableName string = "journal"
-
 //go:embed migrations/*.sql
 var embeddedMigrationData embed.FS
 
@@ -105,17 +103,14 @@ func migrateMessageJournalDB(db *sql.DB, databaseFilePath string) error {
 // AddEntry adds a new message journal entry to the persistent table
 // in the database.
 func (j *MessageJournal) AddEntry(entry yggdrasil.WorkerMessage) error {
-	const insertEntryTemplate string = `INSERT INTO %s (
+	const insertEntryTemplate string = `INSERT INTO journal (
 		message_id, sent, worker_name, response_to, worker_event, worker_data)
 		values (?,?,?,?,?,?)`
 
-	insertAction, err := j.database.Prepare(
-		fmt.Sprintf(insertEntryTemplate, messageJournalTableName),
-	)
+	insertAction, err := j.database.Prepare(insertEntryTemplate)
 	if err != nil {
 		return fmt.Errorf(
-			"cannot prepare statement for table '%v': %w",
-			messageJournalTableName,
+			"cannot prepare statement for 'journal' table: %w",
 			err,
 		)
 	}
@@ -124,8 +119,7 @@ func (j *MessageJournal) AddEntry(entry yggdrasil.WorkerMessage) error {
 	encodedEventData, err := json.Marshal(entry.WorkerEvent.EventData)
 	if err != nil {
 		return fmt.Errorf(
-			"cannot prepare statement for table '%v': %w",
-			messageJournalTableName,
+			"cannot prepare statement for 'journal' table: %w",
 			err,
 		)
 	}
@@ -140,8 +134,7 @@ func (j *MessageJournal) AddEntry(entry yggdrasil.WorkerMessage) error {
 	)
 	if err != nil {
 		return fmt.Errorf(
-			"could not insert journal entry into table '%v': %w",
-			messageJournalTableName,
+			"could not insert journal entry into 'journal' table: %w",
 			err,
 		)
 	}
@@ -149,9 +142,8 @@ func (j *MessageJournal) AddEntry(entry yggdrasil.WorkerMessage) error {
 	entryID, err := persistentResult.LastInsertId()
 	if err != nil {
 		return fmt.Errorf(
-			"could not select last insert ID '%v' for table '%v': %w",
+			"could not select last insert ID '%v' for 'journal' table: %w",
 			entryID,
-			messageJournalTableName,
 			err,
 		)
 	}
@@ -237,12 +229,12 @@ func (j *MessageJournal) GetEntries(filter Filter) ([]map[string]string, error) 
 func (j *MessageJournal) buildDynamicGetEntriesQuery(filter Filter) (string, error) {
 	queryTemplate := template.New("dynamicGetEntriesQuery")
 	queryTemplateParse, err := queryTemplate.Parse(
-		`SELECT * FROM {{.Table}}
-		{{if .MessageID}} INTERSECT SELECT * FROM {{.Table}} WHERE message_id='{{.MessageID}}'{{end}}
-		{{if .Worker}} INTERSECT SELECT * FROM {{.Table}} WHERE worker_name='{{.Worker}}'{{end}}
-		{{if .Since}} INTERSECT SELECT * FROM {{.Table}} WHERE sent>='{{.Since}}'{{end}}
-		{{if .Until}} INTERSECT SELECT * FROM {{.Table}} WHERE sent<='{{.Until}}'{{end}}
-		{{if not .Persistent}} INTERSECT SELECT * FROM {{.Table}} WHERE sent>='{{.InitializedAt}}'{{end}}
+		`SELECT * FROM journal
+		{{if .MessageID}} INTERSECT SELECT * FROM journal WHERE message_id='{{.MessageID}}'{{end}}
+		{{if .Worker}} INTERSECT SELECT * FROM journal WHERE worker_name='{{.Worker}}'{{end}}
+		{{if .Since}} INTERSECT SELECT * FROM journal WHERE sent>='{{.Since}}'{{end}}
+		{{if .Until}} INTERSECT SELECT * FROM journal WHERE sent<='{{.Until}}'{{end}}
+		{{if not .Persistent}} INTERSECT SELECT * FROM journal WHERE sent>='{{.InitializedAt}}'{{end}}
 		ORDER BY sent`,
 	)
 	if err != nil {
@@ -251,7 +243,6 @@ func (j *MessageJournal) buildDynamicGetEntriesQuery(filter Filter) (string, err
 	var compiledQuery bytes.Buffer
 	err = queryTemplateParse.Execute(&compiledQuery,
 		struct {
-			Table         string
 			InitializedAt string
 			Persistent    bool
 			MessageID     string
@@ -259,7 +250,7 @@ func (j *MessageJournal) buildDynamicGetEntriesQuery(filter Filter) (string, err
 			Since         string
 			Until         string
 		}{
-			messageJournalTableName, j.initializedAt.String(), filter.Persistent,
+			j.initializedAt.String(), filter.Persistent,
 			filter.MessageID, filter.Worker, filter.Since, filter.Until,
 		})
 	if err != nil {
