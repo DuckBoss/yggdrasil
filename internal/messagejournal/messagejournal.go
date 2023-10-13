@@ -158,7 +158,7 @@ func (j *MessageJournal) AddEntry(entry yggdrasil.WorkerMessage) error {
 // that meet the criteria of the provided message journal filter.
 func (j *MessageJournal) GetEntries(filter Filter) ([]map[string]string, error) {
 	entries := []map[string]string{}
-	queryString, err := j.buildDynamicGetEntriesQuery(filter)
+	queryString, err := buildDynamicGetEntriesQuery(filter, j.initializedAt)
 	if err != nil {
 		return nil, fmt.Errorf("cannot build dynamic sql query: %w", err)
 	}
@@ -226,16 +226,16 @@ func (j *MessageJournal) GetEntries(filter Filter) ([]map[string]string, error) 
 // buildDynamicGetEntriesQuery is a utility method that builds the dynamic sql query
 // required to filter journal entry messages from the message journal database
 // when they are retrieved in the 'GetEntries' method.
-func (j *MessageJournal) buildDynamicGetEntriesQuery(filter Filter) (string, error) {
+func buildDynamicGetEntriesQuery(filter Filter, initializedAt time.Time) (string, error) {
 	queryTemplate := template.New("dynamicGetEntriesQuery")
 	queryTemplateParse, err := queryTemplate.Parse(
-		`SELECT * FROM journal
-		{{if .MessageID}} INTERSECT SELECT * FROM journal WHERE message_id='{{.MessageID}}'{{end}}
-		{{if .Worker}} INTERSECT SELECT * FROM journal WHERE worker_name='{{.Worker}}'{{end}}
-		{{if .Since}} INTERSECT SELECT * FROM journal WHERE sent>='{{.Since}}'{{end}}
-		{{if .Until}} INTERSECT SELECT * FROM journal WHERE sent<='{{.Until}}'{{end}}
-		{{if not .Persistent}} INTERSECT SELECT * FROM journal WHERE sent>='{{.InitializedAt}}'{{end}}
-		ORDER BY sent`,
+		`SELECT * FROM journal ` +
+			`{{if .MessageID}}INTERSECT SELECT * FROM journal WHERE message_id='{{.MessageID}}' {{end}}` +
+			`{{if .Worker}}INTERSECT SELECT * FROM journal WHERE worker_name='{{.Worker}}' {{end}}` +
+			`{{if .Since}}INTERSECT SELECT * FROM journal WHERE sent>='{{.Since}}' {{end}}` +
+			`{{if .Until}}INTERSECT SELECT * FROM journal WHERE sent<='{{.Until}}' {{end}}` +
+			`{{if not .Persistent}}INTERSECT SELECT * FROM journal WHERE sent>='{{.InitializedAt}}' {{end}}` +
+			`ORDER BY sent`,
 	)
 	if err != nil {
 		return "", fmt.Errorf("cannot parse query template parameters: %w", err)
@@ -250,7 +250,7 @@ func (j *MessageJournal) buildDynamicGetEntriesQuery(filter Filter) (string, err
 			Since         string
 			Until         string
 		}{
-			j.initializedAt.String(), filter.Persistent,
+			initializedAt.String(), filter.Persistent,
 			filter.MessageID, filter.Worker, filter.Since, filter.Until,
 		})
 	if err != nil {
