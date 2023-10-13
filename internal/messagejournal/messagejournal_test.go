@@ -208,3 +208,67 @@ func TestAddEntry(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildDynamicGetEntriesQuery(t *testing.T) {
+	tests := []struct {
+		description string
+		input       struct {
+			filter        Filter
+			initializedAt time.Time
+		}
+		want string
+	}{
+		{
+			description: "build dynamic get entries sql query - unfiltered",
+			input: struct {
+				filter        Filter
+				initializedAt time.Time
+			}{
+				filter: Filter{
+					Persistent: true,
+					MessageID:  "",
+					Worker:     "",
+					Since:      "",
+					Until:      "",
+				},
+				initializedAt: time.Now(),
+			},
+			want: "SELECT * FROM journal " +
+				"ORDER BY sent",
+		},
+		{
+			description: "build dynamic get entries sql query - filtered",
+			input: struct {
+				filter        Filter
+				initializedAt time.Time
+			}{
+				filter: Filter{
+					Persistent: true,
+					MessageID:  "filtered-id",
+					Worker:     "filtered-worker",
+					Since:      "01-01-1970",
+					Until:      "01-01-2000",
+				},
+				initializedAt: time.Now(),
+			},
+			want: "SELECT * FROM journal " +
+				"INTERSECT SELECT * FROM journal WHERE message_id='filtered-id' " +
+				"INTERSECT SELECT * FROM journal WHERE worker_name='filtered-worker' " +
+				"INTERSECT SELECT * FROM journal WHERE sent>='01-01-1970' " +
+				"INTERSECT SELECT * FROM journal WHERE sent<='01-01-2000' " +
+				"ORDER BY sent",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.description, func(t *testing.T) {
+			query, err := buildDynamicGetEntriesQuery(test.input.filter, test.input.initializedAt)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !cmp.Equal(query, test.want) {
+				t.Errorf("%#v != %#v", query, test.want)
+			}
+		})
+	}
+}
