@@ -178,7 +178,7 @@ func setupClient(
 func setupMessageJournal(client *Client) error {
 	messageJournalPath := config.DefaultConfig.MessageJournal
 	if messageJournalPath != "" {
-		journalFilePath := filepath.Join(messageJournalPath)
+		journalFilePath := filepath.Clean(messageJournalPath)
 		journal, err := messagejournal.Open(journalFilePath)
 		if err != nil {
 			return cli.Exit(
