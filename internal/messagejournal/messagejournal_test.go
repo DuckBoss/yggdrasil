@@ -19,7 +19,7 @@ var placeholderWorkerMessageEntry = yggdrasil.WorkerMessage{
 		EventName uint              "json:\"event_name\""
 		EventData map[string]string "json:\"event_data\""
 	}{
-		0,
+		5,
 		map[string]string{"test": "test-event-data"},
 	},
 }
@@ -86,7 +86,7 @@ func TestGetEntries(t *testing.T) {
 					"message_id":   "test-id",
 					"response_to":  "test-response",
 					"sent":         "2000-01-01 00:00:00 +0000 UTC",
-					"worker_event": "",
+					"worker_event": "STOPPED",
 					"worker_data":  "{\"test\":\"test-event-data\"}",
 					"worker_name":  "test-worker",
 				},
@@ -119,7 +119,7 @@ func TestGetEntries(t *testing.T) {
 						EventName uint              "json:\"event_name\""
 						EventData map[string]string "json:\"event_data\""
 					}{
-						0,
+						5,
 						map[string]string{"test": "test-event-data"},
 					},
 				},
@@ -136,7 +136,7 @@ func TestGetEntries(t *testing.T) {
 					"message_id":   "test-filtered-message-id",
 					"response_to":  "test-response",
 					"sent":         "2000-01-01 00:00:00 +0000 UTC",
-					"worker_event": "",
+					"worker_event": "STOPPED",
 					"worker_data":  "{\"test\":\"test-event-data\"}",
 					"worker_name":  "test-worker",
 				},
