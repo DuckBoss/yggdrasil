@@ -12,7 +12,7 @@ import (
 
 	"git.sr.ht/~spc/go-log"
 	"github.com/golang-migrate/migrate/v4"
-	"github.com/golang-migrate/migrate/v4/database/sqlite"
+	"github.com/golang-migrate/migrate/v4/database/sqlite3"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/redhatinsights/yggdrasil"
@@ -77,7 +77,7 @@ func Open(databaseFilePath string) (*MessageJournal, error) {
 // migrateMessageJournalDB handles the migration of the message journal
 // database and ensures the schema is up to date on each session start.
 func migrateMessageJournalDB(db *sql.DB, databaseFilePath string) error {
-	databaseDriver, err := sqlite.WithInstance(db, &sqlite.Config{})
+	databaseDriver, err := sqlite3.WithInstance(db, &sqlite3.Config{})
 	if err != nil {
 		return fmt.Errorf("database driver not initialized: %w", err)
 	}
